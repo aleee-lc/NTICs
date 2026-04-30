@@ -1,0 +1,578 @@
+<main class="app-shell">
+  <div class="bg-grid" aria-hidden="true"></div>
+  <div class="bg-glow bg-glow-a" aria-hidden="true"></div>
+  <div class="bg-glow bg-glow-b" aria-hidden="true"></div>
+
+  <section class="state-card" *ngIf="isLoading()">Cargando aplicacion...</section>
+
+  <section class="state-card config-error" *ngIf="!isLoading() && configError()">
+    <p class="eyebrow">Configuracion faltante</p>
+    <h1>No se pudo iniciar el frontend</h1>
+    <p>{{ configError() }}</p>
+    <p>
+      Verifica que tu backend tenga en <code>.env</code>:
+      <code>SUPABASE_URL</code> y <code>SUPABASE_ANON_KEY</code>.
+    </p>
+  </section>
+
+  <section class="auth-layout" *ngIf="!isLoading() && !configError() && !session()">
+    <article class="auth-card">
+      <div class="auth-brand">
+        <img class="auth-brand-logo" src="/paperhub-icon.png" alt="PaperHub" />
+        <p class="eyebrow">PaperHub</p>
+      </div>
+      <h1 *ngIf="authView() === 'login'">Iniciar sesion</h1>
+      <h1 *ngIf="authView() === 'register'">Crear cuenta</h1>
+      <p class="auth-subtitle" *ngIf="authView() === 'login'">
+        Accede a tu sistema de gestion documental.
+      </p>
+      <p class="auth-subtitle" *ngIf="authView() === 'register'">
+        Tu cuenta se crea con Supabase Auth.
+      </p>
+
+      <form class="auth-form" *ngIf="authView() === 'login'" (ngSubmit)="login()">
+        <label class="field">
+          <span>Correo</span>
+          <input
+            type="email"
+            required
+            placeholder="usuario@correo.com"
+            name="loginEmail"
+            [(ngModel)]="loginEmail"
+          />
+        </label>
+
+        <label class="field">
+          <span>Contrasena</span>
+          <input
+            type="password"
+            required
+            placeholder="********"
+            name="loginPassword"
+            [(ngModel)]="loginPassword"
+          />
+        </label>
+
+        <div class="auth-actions">
+          <button class="btn btn-primary" type="submit">Entrar</button>
+          <button class="btn btn-outline" type="button" (click)="setAuthView('register')">
+            Crear cuenta
+          </button>
+          <button class="btn btn-link" type="button" (click)="sendPasswordReset()">
+            Recuperar contrasena
+          </button>
+        </div>
+
+        <p class="msg">{{ authMessage() }}</p>
+      </form>
+
+      <form class="auth-form" *ngIf="authView() === 'register'" (ngSubmit)="createAccount()">
+        <label class="field">
+          <span>Nombre (opcional)</span>
+          <input
+            type="text"
+            placeholder="Nombre completo"
+            name="registerName"
+            [(ngModel)]="registerName"
+          />
+        </label>
+
+        <label class="field">
+          <span>Correo</span>
+          <input
+            type="email"
+            required
+            placeholder="usuario@correo.com"
+            name="registerEmail"
+            [(ngModel)]="registerEmail"
+          />
+        </label>
+
+        <label class="field">
+          <span>Contrasena</span>
+          <input
+            type="password"
+            required
+            minlength="6"
+            placeholder="Minimo 6 caracteres"
+            name="registerPassword"
+            [(ngModel)]="registerPassword"
+          />
+        </label>
+
+        <label class="field">
+          <span>Confirmar contrasena</span>
+          <input
+            type="password"
+            required
+            minlength="6"
+            placeholder="Repite la contrasena"
+            name="registerConfirmPassword"
+            [(ngModel)]="registerConfirmPassword"
+          />
+        </label>
+
+        <div class="auth-actions">
+          <button class="btn btn-primary" type="submit">Registrar</button>
+          <button class="btn btn-outline" type="button" (click)="setAuthView('login')">
+            Volver
+          </button>
+        </div>
+
+        <p class="msg">{{ authMessage() }}</p>
+      </form>
+    </article>
+  </section>
+
+  <section
+    class="workspace"
+    [class.sidebar-collapsed]="isSidebarCollapsed()"
+    *ngIf="!isLoading() && !configError() && session()"
+  >
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <img class="brand-logo" src="/paperhub-icon.png" alt="PaperHub" />
+        <div class="brand-copy">
+          <h2>PaperHub</h2>
+          <p>Sistema de Gestion Documental</p>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <button class="nav-item" [class.active]="activePanel() === 'overview'" (click)="openPanel('overview')" title="Dashboard">
+          <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 4h7v7H4zm9 0h7v5h-7zM4 13h5v7H4zm7 5h9v2h-9zm0-5h9v3h-9z" />
+          </svg>
+          <span>Dashboard</span>
+        </button>
+
+        <button class="nav-item" [class.active]="activePanel() === 'documents'" (click)="openPanel('documents')" title="Documentos">
+          <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6 3h9l5 5v13H6zM14 4.5V9h4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+            <path d="M9 13h8M9 17h8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+          </svg>
+          <span>Documentos</span>
+        </button>
+
+        <button class="nav-item" [class.active]="activePanel() === 'upload'" (click)="openPanel('upload')" title="Subir documento">
+          <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 3v10m0-10-4 4m4-4 4 4M4 14v5h16v-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+          <span>Subir documento</span>
+        </button>
+
+        <button class="nav-item" [class.active]="activePanel() === 'categories'" (click)="openPanel('categories')" title="Categorias">
+          <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M3 7h7l2 2h9v10H3z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+          <span>Categorias</span>
+        </button>
+      </nav>
+    </aside>
+
+    <div class="main-area">
+      <header class="topbar">
+        <label class="search-box">
+          <svg class="search-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="m17 17 4 4M3 11a8 8 0 1 0 16 0 8 8 0 0 0-16 0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+          </svg>
+          <input
+            type="text"
+            [placeholder]="activeOrganizationId() ? 'Buscar documentos...' : 'Selecciona una organizacion...'"
+            [value]="searchTerm()"
+            (input)="onSearchInput($event)"
+            [disabled]="!activeOrganizationId()"
+          />
+        </label>
+
+        <div class="topbar-actions">
+          <label class="organization-picker">
+            <span>Organizacion</span>
+            <select [value]="activeOrganizationId()" (change)="onOrganizationChange($event)">
+              <option value="" *ngIf="organizations().length === 0">Sin organizaciones</option>
+              <option *ngFor="let organization of organizations()" [value]="organization.id">
+                {{ organization.name }} - {{ organizationRoleLabel(organization.role) }}
+              </option>
+            </select>
+          </label>
+
+          <button
+            class="icon-button sidebar-toggle"
+            type="button"
+            [title]="isSidebarCollapsed() ? 'Expandir menu' : 'Minimizar menu'"
+            [attr.aria-label]="isSidebarCollapsed() ? 'Expandir menu lateral' : 'Minimizar menu lateral'"
+            (click)="toggleSidebar()"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 7h16M4 12h16M4 17h16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+            </svg>
+          </button>
+
+          <button
+            class="icon-button"
+            type="button"
+            title="Actualizar"
+            aria-label="Actualizar datos"
+            (click)="refreshData()"
+            [disabled]="!activeOrganizationId()"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M21 12a9 9 0 1 1-3-6.7M21 4v6h-6" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </button>
+
+          <button
+            class="btn btn-outline topbar-org-create"
+            type="button"
+            (click)="promptCreateOrganization()"
+            [disabled]="isCreatingOrganization()"
+          >
+            {{ isCreatingOrganization() ? 'Creando...' : '+ Organizacion' }}
+          </button>
+
+          <div class="user-menu">
+            <button
+              class="user-pill user-menu-trigger"
+              type="button"
+              (click)="toggleUserMenu()"
+              [attr.aria-expanded]="isUserMenuOpen()"
+              aria-haspopup="menu"
+            >
+              <div class="avatar">{{ currentUserInitials() }}</div>
+              <div>
+                <strong>{{ currentUserName() }}</strong>
+                <small>Administrador</small>
+              </div>
+              <svg class="user-chevron" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="m7 10 5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </button>
+
+            <div class="user-menu-pop" *ngIf="isUserMenuOpen()" role="menu">
+              <p class="user-menu-email">{{ session()?.user?.email }}</p>
+              <button class="btn btn-outline user-menu-logout" type="button" (click)="logout()">
+                Cerrar sesion
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <section class="content">
+        <section class="surface empty-organization" *ngIf="!activeOrganizationId()">
+          <h2>Selecciona una organizacion</h2>
+          <p>
+            {{ organizationsMessage() || 'Aun no hay una organizacion activa para cargar categorias y documentos.' }}
+          </p>
+          <button class="btn btn-primary" type="button" (click)="promptCreateOrganization()">
+            Crear organizacion
+          </button>
+        </section>
+
+        <ng-container *ngIf="activeOrganizationId()">
+        <section class="surface" *ngIf="activePanel() === 'overview'">
+          <div class="panel-header">
+            <div>
+              <h1>Panel de Control</h1>
+              <p>Bienvenido al sistema de gestion documental empresarial</p>
+            </div>
+            <small>API: {{ apiBase }}</small>
+          </div>
+
+          <div class="stats-grid">
+            <article class="stat-card">
+              <div class="stat-top">
+                <p>Total de documentos</p>
+                <span class="stat-icon tone-brand" aria-hidden="true">
+                  <svg viewBox="0 0 24 24">
+                    <path d="M6 3h9l5 5v13H6zM14 4.5V9h4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+                    <path d="M9 13h8M9 17h6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+                  </svg>
+                </span>
+              </div>
+              <strong>{{ totalDocuments() }}</strong>
+              <small>Registrados en la plataforma</small>
+            </article>
+
+            <article class="stat-card">
+              <div class="stat-top">
+                <p>Pendientes de aprobacion</p>
+                <span class="stat-icon tone-warning" aria-hidden="true">
+                  <svg viewBox="0 0 24 24">
+                    <path d="M12 6v6l3 2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+                    <circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="1.8" />
+                  </svg>
+                </span>
+              </div>
+              <strong>{{ inReviewDocuments() }}</strong>
+              <small>Requieren atencion</small>
+            </article>
+
+            <article class="stat-card">
+              <div class="stat-top">
+                <p>Actividad reciente</p>
+                <span class="stat-icon tone-success" aria-hidden="true">
+                  <svg viewBox="0 0 24 24">
+                    <path d="M4 15l5-5 4 4 7-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                </span>
+              </div>
+              <strong>{{ recentDocuments().length }}</strong>
+              <small>Movimientos recientes</small>
+            </article>
+          </div>
+
+          <article class="table-card">
+            <div class="table-header">
+              <h2>Documentos Recientes</h2>
+            </div>
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Nombre del documento</th>
+                    <th>Categoria</th>
+                    <th>Autor</th>
+                    <th>Version</th>
+                    <th>Estado</th>
+                    <th>Ultima modificacion</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr class="empty-row" *ngIf="recentDocuments().length === 0">
+                    <td colspan="7">Sin documentos registrados.</td>
+                  </tr>
+                  <tr *ngFor="let item of recentDocuments()">
+                    <td class="doc-title">{{ item.title }}</td>
+                    <td>{{ item.category_name || 'Sin categoria' }}</td>
+                    <td>{{ documentAuthorLabel(item) }}</td>
+                    <td>v{{ item.current_version }}</td>
+                    <td>
+                      <span class="status-pill" [ngClass]="statusClass(item.status)">
+                        {{ statusLabel(item.status) }}
+                      </span>
+                    </td>
+                    <td>{{ item.updated_at | date: 'dd/MM/yyyy' }}</td>
+                    <td>
+                      <button
+                        class="table-action"
+                        type="button"
+                        title="Preview"
+                        (click)="openDocumentPreview(item)"
+                        [disabled]="!item.current_storage_path"
+                      >
+                        Ver
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+        </section>
+
+        <section class="surface" *ngIf="activePanel() === 'documents'">
+          <div class="panel-header">
+            <div>
+              <h1>Documentos</h1>
+              <p>Consulta y revisa tus archivos registrados.</p>
+            </div>
+          </div>
+
+          <div class="filters-row">
+            <label class="field compact-field">
+              <span>Filtrar por categoria</span>
+              <select
+                [ngModel]="documentCategoryFilter()"
+                (ngModelChange)="setDocumentCategoryFilter($event)"
+              >
+                <option value="">Todas</option>
+                <option *ngFor="let category of categories()" [value]="category.id">
+                  {{ category.name }}
+                </option>
+              </select>
+            </label>
+
+            <button class="btn btn-outline" type="button" (click)="clearDocumentFilters()">
+              Limpiar filtros
+            </button>
+          </div>
+
+          <article class="table-card">
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Titulo</th>
+                    <th>Categoria</th>
+                    <th>Estado</th>
+                    <th>Version</th>
+                    <th>Creado</th>
+                    <th>Preview</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr class="empty-row" *ngIf="visibleDocuments().length === 0">
+                    <td colspan="6">No hay documentos para este filtro.</td>
+                  </tr>
+                  <tr *ngFor="let item of visibleDocuments()">
+                    <td class="doc-title">{{ item.title }}</td>
+                    <td>{{ item.category_name || 'Sin categoria' }}</td>
+                    <td>
+                      <span class="status-pill" [ngClass]="statusClass(item.status)">
+                        {{ statusLabel(item.status) }}
+                      </span>
+                    </td>
+                    <td>v{{ item.current_version }}</td>
+                    <td>{{ item.created_at | date: 'dd/MM/yyyy HH:mm' }}</td>
+                    <td>
+                      <button
+                        class="table-action"
+                        type="button"
+                        (click)="openDocumentPreview(item)"
+                        [disabled]="!item.current_storage_path"
+                      >
+                        Preview
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+
+          <p class="msg panel-msg" *ngIf="documentsMessage()">{{ documentsMessage() }}</p>
+        </section>
+
+        <section class="surface" *ngIf="activePanel() === 'upload'">
+          <div class="panel-header">
+            <div>
+              <h1>Subir documento</h1>
+              <p>El archivo se guarda en Supabase Storage y luego se registra en tu backend.</p>
+            </div>
+          </div>
+
+          <form class="upload-grid" (ngSubmit)="uploadDocument()">
+            <label class="field">
+              <span>Titulo</span>
+              <input required maxlength="200" name="docTitle" [(ngModel)]="docTitle" />
+            </label>
+
+            <label class="field">
+              <span>Categoria</span>
+              <select name="docCategoryId" [(ngModel)]="docCategoryId">
+                <option value="">Sin categoria</option>
+                <option *ngFor="let category of categories()" [value]="category.id">
+                  {{ category.name }}
+                </option>
+              </select>
+            </label>
+
+            <label class="field full">
+              <span>Descripcion</span>
+              <textarea rows="4" maxlength="2000" name="docDescription" [(ngModel)]="docDescription">
+              </textarea>
+            </label>
+
+            <label class="field">
+              <span>Resumen de cambio</span>
+              <input maxlength="500" name="docChangeSummary" [(ngModel)]="docChangeSummary" />
+            </label>
+
+            <label class="field">
+              <span>Archivo</span>
+              <input type="file" required (change)="onFileSelected($event)" />
+            </label>
+
+            <div class="full form-actions">
+              <button class="btn btn-primary" type="submit">Subir documento</button>
+            </div>
+
+            <p class="msg panel-msg full" *ngIf="uploadMessage()">{{ uploadMessage() }}</p>
+          </form>
+        </section>
+
+        <section class="surface" *ngIf="activePanel() === 'categories'">
+          <div class="panel-header with-action">
+            <div>
+              <h1>Categorias</h1>
+              <p>Organiza documentos por categorias</p>
+            </div>
+            <button class="btn btn-primary" type="button" (click)="openCreateCategoryForm()">
+              + Nueva categoria
+            </button>
+          </div>
+
+          <p class="total-label">Total de categorias: {{ categories().length }}</p>
+
+          <article class="category-form" *ngIf="isCategoryFormOpen()">
+            <h3>{{ editingCategoryId() ? 'Editar categoria' : 'Nueva categoria' }}</h3>
+
+            <form class="category-form-grid" (ngSubmit)="saveCategory()">
+              <label class="field">
+                <span>Nombre</span>
+                <input maxlength="100" required name="categoryName" [(ngModel)]="categoryName" />
+              </label>
+
+              <label class="field full">
+                <span>Descripcion</span>
+                <textarea
+                  rows="3"
+                  maxlength="300"
+                  name="categoryDescription"
+                  [(ngModel)]="categoryDescription"
+                ></textarea>
+              </label>
+
+              <div class="form-actions full">
+                <button class="btn btn-primary" type="submit" [disabled]="isSavingCategory()">
+                  {{ editingCategoryId() ? 'Guardar cambios' : 'Crear categoria' }}
+                </button>
+                <button class="btn btn-outline" type="button" (click)="cancelCategoryForm()">
+                  Cancelar
+                </button>
+              </div>
+            </form>
+          </article>
+
+          <div class="category-grid">
+            <article class="category-card" *ngFor="let category of filteredCategories(); let i = index">
+              <div class="category-card-head">
+                <div class="category-icon" [ngClass]="categoryTone(i)">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M3 7h7l2 2h9v10H3z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                </div>
+                <div class="category-actions">
+                  <button class="icon-button small" type="button" (click)="startEditCategory(category)">
+                    Editar
+                  </button>
+                  <button class="icon-button small danger" type="button" (click)="deleteCategory(category)">
+                    Eliminar
+                  </button>
+                </div>
+              </div>
+
+              <h3>{{ category.name }}</h3>
+              <p>{{ category.description || 'Sin descripcion' }}</p>
+
+              <div class="category-footer">
+                <span>{{ category.documents_count }} documentos</span>
+                <button class="btn btn-link-inline" type="button" (click)="viewCategoryDocuments(category.id)">
+                  Ver documentos
+                </button>
+              </div>
+            </article>
+          </div>
+
+          <p class="msg panel-msg" *ngIf="filteredCategories().length === 0">
+            No hay categorias para la busqueda actual.
+          </p>
+          <p class="msg panel-msg" *ngIf="categoryMessage()">{{ categoryMessage() }}</p>
+        </section>
+        </ng-container>
+      </section>
+    </div>
+  </section>
+</main>

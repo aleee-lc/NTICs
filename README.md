@@ -4,6 +4,7 @@ Starter backend para el proyecto del PDF con:
 - API REST en Node.js + Express + TypeScript.
 - Esquema PostgreSQL orientado a Supabase.
 - Soporte inicial para documentos, versiones, flujo de aprobacion y auditoria.
+- Frontend en Angular con login, dashboard y modulo de subida de documentos.
 
 ## 1) Configurar base de datos en Supabase
 
@@ -16,6 +17,7 @@ Starter backend para el proyecto del PDF con:
 
 1. Copia `.env.example` a `.env`.
 2. Reemplaza `DATABASE_URL` con tu URI real de Supabase.
+3. Agrega `SUPABASE_URL` y `SUPABASE_ANON_KEY` (para login/upload en frontend).
 
 Ejemplo:
 
@@ -23,9 +25,12 @@ Ejemplo:
 NODE_ENV=development
 PORT=3000
 DATABASE_URL=postgresql://postgres.nqygutjxnwzgkbpwiqjw:YOUR_PASSWORD@aws-0-us-west-2.pooler.supabase.com:6543/postgres
+SUPABASE_URL=https://nqygutjxnwzgkbpwiqjw.supabase.co
+SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY
+SUPABASE_STORAGE_BUCKET=documentos
 ```
 
-## 3) Instalar y ejecutar
+## 3) Backend: instalar y ejecutar
 
 ```bash
 npm install
@@ -36,7 +41,21 @@ API disponible en:
 
 `http://localhost:3000`
 
-## 4) Endpoints iniciales
+## 4) Frontend Angular: instalar y ejecutar
+
+```bash
+cd frontend
+npm install
+npm start
+```
+
+Frontend disponible en:
+
+`http://localhost:4200`
+
+El frontend consume la API en `http://localhost:3000` (config en `frontend/src/environments/environment.ts`).
+
+## 5) Endpoints iniciales
 
 - `GET /api/health`
 - `GET /api/categories`
@@ -47,7 +66,7 @@ API disponible en:
 - `PATCH /api/documents/:id/status`
 - `GET /api/documents/:id/audit`
 
-## 5) Payloads base
+## 6) Payloads base
 
 Crear documento (`POST /api/documents`):
 

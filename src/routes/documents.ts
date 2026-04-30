@@ -1,8 +1,11 @@
 import { Router } from "express";
 import { z } from "zod";
 import { pool } from "../config/db";
+import { type OrganizationRequest, requireOrganizationContext } from "../middleware/organization-context";
 
 export const documentsRouter = Router();
+
+documentsRouter.use(requireOrganizationContext);
 
 const documentStatusSchema = z.enum([
   "draft",
@@ -26,7 +29,7 @@ const createDocumentSchema = z.object({
   title: z.string().trim().min(3).max(200),
   description: z.string().trim().max(2000).optional(),
   categoryId: z.string().uuid().optional(),
-  createdBy: z.string().uuid(),
+  createdBy: z.string().uuid().optional(),
   storagePath: z.string().min(1),
   fileName: z.string().trim().min(1).max(255),
   mimeType: z.string().trim().max(120).optional(),
@@ -35,7 +38,7 @@ const createDocumentSchema = z.object({
 });
 
 const createVersionSchema = z.object({
-  uploadedBy: z.string().uuid(),
+  uploadedBy: z.string().uuid().optional(),
   storagePath: z.string().min(1),
   fileName: z.string().trim().min(1).max(255),
   mimeType: z.string().trim().max(120).optional(),
@@ -51,18 +54,19 @@ const updateStatusSchema = z.object({
 });
 
 documentsRouter.get("/", async (req, res, next) => {
+  const context = (req as unknown as OrganizationRequest).organizationContext;
   const parsed = listDocumentsQuerySchema.safeParse(req.query);
 
   if (!parsed.success) {
     return res.status(400).json({
-      error: "Parámetros inválidos",
+      error: "Parametros invalidos",
       details: parsed.error.flatten().fieldErrors,
     });
   }
 
   try {
-    const values: string[] = [];
-    const filters: string[] = [];
+    const values: string[] = [context.organizationId];
+    const filters: string[] = ["d.organization_id = $1"];
 
     if (parsed.data.status) {
       values.push(parsed.data.status);
@@ -81,7 +85,7 @@ documentsRouter.get("/", async (req, res, next) => {
       filters.push(`d.category_id = $${values.length}`);
     }
 
-    const whereClause = filters.length > 0 ? `where ${filters.join(" and ")}` : "";
+    const whereClause = `where ${filters.join(" and ")}`;
 
     const query = `
       select
@@ -93,10 +97,19 @@ documentsRouter.get("/", async (req, res, next) => {
         d.created_by,
         d.created_at,
         d.updated_at,
+        dv.storage_path as current_storage_path,
+        dv.file_name as current_file_name,
+        dv.mime_type as current_mime_type,
         c.id as category_id,
         c.name as category_name
       from documents d
-      left join categories c on c.id = d.category_id
+      left join document_versions dv
+        on dv.document_id = d.id
+       and dv.organization_id = d.organization_id
+       and dv.version_number = d.current_version
+      left join categories c
+        on c.id = d.category_id
+       and c.organization_id = d.organization_id
       ${whereClause}
       order by d.updated_at desc
       limit 100
@@ -110,11 +123,12 @@ documentsRouter.get("/", async (req, res, next) => {
 });
 
 documentsRouter.post("/", async (req, res, next) => {
+  const context = (req as unknown as OrganizationRequest).organizationContext;
   const parsed = createDocumentSchema.safeParse(req.body);
 
   if (!parsed.success) {
     return res.status(400).json({
-      error: "Payload inválido",
+      error: "Payload invalido",
       details: parsed.error.flatten().fieldErrors,
     });
   }
@@ -124,17 +138,35 @@ documentsRouter.post("/", async (req, res, next) => {
   try {
     await client.query("begin");
 
+    if (parsed.data.categoryId) {
+      const categoryResult = await client.query(
+        `
+        select id
+        from categories
+        where id = $1 and organization_id = $2
+        limit 1
+        `,
+        [parsed.data.categoryId, context.organizationId],
+      );
+
+      if (categoryResult.rowCount === 0) {
+        await client.query("rollback");
+        return res.status(404).json({ error: "Categoria no encontrada" });
+      }
+    }
+
     const documentResult = await client.query(
       `
-      insert into documents (title, description, category_id, created_by)
-      values ($1, $2, $3, $4)
+      insert into documents (organization_id, title, description, category_id, created_by)
+      values ($1, $2, $3, $4, $5)
       returning id, status, current_version, created_at
       `,
       [
+        context.organizationId,
         parsed.data.title,
         parsed.data.description ?? null,
         parsed.data.categoryId ?? null,
-        parsed.data.createdBy,
+        context.userId,
       ],
     );
 
@@ -143,6 +175,7 @@ documentsRouter.post("/", async (req, res, next) => {
     await client.query(
       `
       insert into document_versions (
+        organization_id,
         document_id,
         version_number,
         storage_path,
@@ -152,17 +185,18 @@ documentsRouter.post("/", async (req, res, next) => {
         change_summary,
         uploaded_by
       )
-      values ($1, $2, $3, $4, $5, $6, $7, $8)
+      values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       `,
       [
+        context.organizationId,
         document.id,
         document.current_version,
         parsed.data.storagePath,
         parsed.data.fileName,
         parsed.data.mimeType ?? null,
         parsed.data.fileSize ?? null,
-        parsed.data.changeSummary ?? "Versión inicial",
-        parsed.data.createdBy,
+        parsed.data.changeSummary ?? "Version inicial",
+        context.userId,
       ],
     );
 
@@ -183,12 +217,13 @@ documentsRouter.post("/", async (req, res, next) => {
 });
 
 documentsRouter.post("/:id/versions", async (req, res, next) => {
+  const context = (req as unknown as OrganizationRequest).organizationContext;
   const params = idParamsSchema.safeParse(req.params);
   const payload = createVersionSchema.safeParse(req.body);
 
   if (!params.success || !payload.success) {
     return res.status(400).json({
-      error: "Datos inválidos",
+      error: "Datos invalidos",
       details: {
         params: params.success ? undefined : params.error.flatten().fieldErrors,
         body: payload.success ? undefined : payload.error.flatten().fieldErrors,
@@ -205,10 +240,10 @@ documentsRouter.post("/:id/versions", async (req, res, next) => {
       `
       select current_version
       from documents
-      where id = $1
+      where id = $1 and organization_id = $2
       for update
       `,
-      [params.data.id],
+      [params.data.id, context.organizationId],
     );
 
     if (lockResult.rowCount === 0) {
@@ -221,6 +256,7 @@ documentsRouter.post("/:id/versions", async (req, res, next) => {
     await client.query(
       `
       insert into document_versions (
+        organization_id,
         document_id,
         version_number,
         storage_path,
@@ -230,9 +266,10 @@ documentsRouter.post("/:id/versions", async (req, res, next) => {
         change_summary,
         uploaded_by
       )
-      values ($1, $2, $3, $4, $5, $6, $7, $8)
+      values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       `,
       [
+        context.organizationId,
         params.data.id,
         nextVersion,
         payload.data.storagePath,
@@ -240,7 +277,7 @@ documentsRouter.post("/:id/versions", async (req, res, next) => {
         payload.data.mimeType ?? null,
         payload.data.fileSize ?? null,
         payload.data.changeSummary ?? null,
-        payload.data.uploadedBy,
+        context.userId,
       ],
     );
 
@@ -248,10 +285,10 @@ documentsRouter.post("/:id/versions", async (req, res, next) => {
       `
       update documents
       set current_version = $2, updated_at = now()
-      where id = $1
+      where id = $1 and organization_id = $3
       returning id, current_version, updated_at
       `,
-      [params.data.id, nextVersion],
+      [params.data.id, nextVersion, context.organizationId],
     );
 
     await client.query("commit");
@@ -265,12 +302,13 @@ documentsRouter.post("/:id/versions", async (req, res, next) => {
 });
 
 documentsRouter.patch("/:id/status", async (req, res, next) => {
+  const context = (req as unknown as OrganizationRequest).organizationContext;
   const params = idParamsSchema.safeParse(req.params);
   const payload = updateStatusSchema.safeParse(req.body);
 
   if (!params.success || !payload.success) {
     return res.status(400).json({
-      error: "Datos inválidos",
+      error: "Datos invalidos",
       details: {
         params: params.success ? undefined : params.error.flatten().fieldErrors,
         body: payload.success ? undefined : payload.error.flatten().fieldErrors,
@@ -287,10 +325,10 @@ documentsRouter.patch("/:id/status", async (req, res, next) => {
       `
       update documents
       set status = $2, updated_at = now()
-      where id = $1
+      where id = $1 and organization_id = $3
       returning id, status, updated_at
       `,
-      [params.data.id, payload.data.status],
+      [params.data.id, payload.data.status, context.organizationId],
     );
 
     if (documentResult.rowCount === 0) {
@@ -298,25 +336,41 @@ documentsRouter.patch("/:id/status", async (req, res, next) => {
       return res.status(404).json({ error: "Documento no encontrado" });
     }
 
-    if (
-      payload.data.reviewerId &&
-      ["in_review", "approved", "rejected"].includes(payload.data.status)
-    ) {
+    if (payload.data.stepId) {
+      const stepResult = await client.query(
+        `
+        select id
+        from approval_steps
+        where id = $1 and organization_id = $2
+        limit 1
+        `,
+        [payload.data.stepId, context.organizationId],
+      );
+
+      if (stepResult.rowCount === 0) {
+        await client.query("rollback");
+        return res.status(404).json({ error: "Paso de aprobacion no encontrado" });
+      }
+    }
+
+    if (["in_review", "approved", "rejected"].includes(payload.data.status)) {
       await client.query(
         `
         insert into document_approvals (
+          organization_id,
           document_id,
           step_id,
           reviewer_id,
           decision,
           comments
         )
-        values ($1, $2, $3, $4, $5)
+        values ($1, $2, $3, $4, $5, $6)
         `,
         [
+          context.organizationId,
           params.data.id,
           payload.data.stepId ?? null,
-          payload.data.reviewerId,
+          context.userId,
           payload.data.status,
           payload.data.comments ?? null,
         ],
@@ -334,11 +388,12 @@ documentsRouter.patch("/:id/status", async (req, res, next) => {
 });
 
 documentsRouter.get("/:id/audit", async (req, res, next) => {
+  const context = (req as unknown as OrganizationRequest).organizationContext;
   const params = idParamsSchema.safeParse(req.params);
 
   if (!params.success) {
     return res.status(400).json({
-      error: "Parámetro inválido",
+      error: "Parametro invalido",
       details: params.error.flatten().fieldErrors,
     });
   }
@@ -348,11 +403,11 @@ documentsRouter.get("/:id/audit", async (req, res, next) => {
       `
       select id, entity_type, entity_id, action, actor_id, old_data, new_data, created_at
       from audit_logs
-      where entity_id = $1
+      where organization_id = $1 and entity_id = $2
       order by created_at desc
       limit 200
       `,
-      [params.data.id],
+      [context.organizationId, params.data.id],
     );
 
     res.json({ items: result.rows });
@@ -360,4 +415,3 @@ documentsRouter.get("/:id/audit", async (req, res, next) => {
     next(error);
   }
 });
-
