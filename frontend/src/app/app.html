@@ -167,6 +167,13 @@
           </svg>
           <span>Categorias</span>
         </button>
+
+        <button class="nav-item" [class.active]="activePanel() === 'members'" (click)="openPanel('members')" title="Miembros">
+          <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M8 11a4 4 0 1 1 0-8 4 4 0 0 1 0 8Zm8 10H2v-1a6 6 0 0 1 12 0v1Zm4-10v4m2-2h-4m-1-5a3 3 0 1 0-2-5.2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+          <span>Miembros</span>
+        </button>
       </nav>
     </aside>
 
@@ -409,7 +416,7 @@
                     <th>Estado</th>
                     <th>Version</th>
                     <th>Creado</th>
-                    <th>Preview</th>
+                    <th>Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -430,6 +437,13 @@
                       <button
                         class="table-action"
                         type="button"
+                        (click)="openDocumentDetail(item.id)"
+                      >
+                        Detalle
+                      </button>
+                      <button
+                        class="table-action"
+                        type="button"
                         (click)="openDocumentPreview(item)"
                         [disabled]="!item.current_storage_path"
                       >
@@ -440,6 +454,123 @@
                 </tbody>
               </table>
             </div>
+          </article>
+
+          <article class="detail-panel" *ngIf="selectedDocument() as detail">
+            <div class="detail-header">
+              <div>
+                <p class="eyebrow">Detalle del documento</p>
+                <h2>{{ detail.title }}</h2>
+                <p>{{ detail.current_file_name || 'Sin archivo principal' }} - {{ formatFileSize(detail.current_file_size) }}</p>
+              </div>
+              <button class="icon-button small" type="button" (click)="closeDocumentDetail()">Cerrar</button>
+            </div>
+
+            <form class="detail-grid" (ngSubmit)="saveDocumentDetail()">
+              <label class="field">
+                <span>Titulo</span>
+                <input required maxlength="200" name="detailTitle" [(ngModel)]="detailTitle" [disabled]="!canWriteDocuments()" />
+              </label>
+
+              <label class="field">
+                <span>Categoria</span>
+                <select name="detailCategoryId" [(ngModel)]="detailCategoryId" [disabled]="!canWriteDocuments()">
+                  <option value="">Sin categoria</option>
+                  <option *ngFor="let category of categories()" [value]="category.id">
+                    {{ category.name }}
+                  </option>
+                </select>
+              </label>
+
+              <label class="field full">
+                <span>Descripcion</span>
+                <textarea rows="3" maxlength="2000" name="detailDescription" [(ngModel)]="detailDescription" [disabled]="!canWriteDocuments()"></textarea>
+              </label>
+
+              <div class="form-actions full">
+                <button class="btn btn-primary" type="submit" [disabled]="!canWriteDocuments()">Guardar cambios</button>
+                <button class="btn btn-outline" type="button" (click)="changeDocumentStatus('archived')" [disabled]="!canApproveDocuments() || detail.status === 'archived'">
+                  Archivar
+                </button>
+                <button class="btn btn-outline danger-action" type="button" (click)="deleteSelectedDocument()" [disabled]="!canApproveDocuments()">
+                  Eliminar
+                </button>
+              </div>
+            </form>
+
+            <div class="detail-columns">
+              <section class="detail-section">
+                <h3>Aprobacion</h3>
+                <p class="current-status">
+                  Estado actual:
+                  <span class="status-pill" [ngClass]="statusClass(detail.status)">
+                    {{ statusLabel(detail.status) }}
+                  </span>
+                </p>
+                <label class="field">
+                  <span>Comentarios</span>
+                  <textarea rows="3" maxlength="1000" name="approvalComments" [(ngModel)]="approvalComments" [disabled]="!canApproveDocuments()"></textarea>
+                </label>
+                <div class="form-actions">
+                  <button class="btn btn-outline" type="button" (click)="changeDocumentStatus('in_review')" [disabled]="!canWriteDocuments()">
+                    Enviar a revision
+                  </button>
+                  <button class="btn btn-primary" type="button" (click)="changeDocumentStatus('approved')" [disabled]="!canApproveDocuments()">
+                    Aprobar
+                  </button>
+                  <button class="btn btn-outline danger-action" type="button" (click)="changeDocumentStatus('rejected')" [disabled]="!canApproveDocuments()">
+                    Rechazar
+                  </button>
+                </div>
+
+                <div class="timeline">
+                  <p class="empty-inline" *ngIf="detail.approvals.length === 0">Sin decisiones registradas.</p>
+                  <article class="timeline-item" *ngFor="let approval of detail.approvals">
+                    <strong>{{ statusLabel(approval.decision) }}</strong>
+                    <span>{{ approval.reviewer_name || approval.reviewer_email || userIdLabel(approval.reviewer_id) }}</span>
+                    <small>{{ approval.reviewed_at | date: 'dd/MM/yyyy HH:mm' }}</small>
+                    <p *ngIf="approval.comments">{{ approval.comments }}</p>
+                  </article>
+                </div>
+              </section>
+
+              <section class="detail-section">
+                <h3>Versiones</h3>
+                <form class="version-form" (ngSubmit)="uploadDocumentVersion()">
+                  <label class="field">
+                    <span>Archivo nuevo</span>
+                    <input type="file" (change)="onVersionFileSelected($event)" [disabled]="!canWriteDocuments()" />
+                  </label>
+                  <label class="field">
+                    <span>Resumen</span>
+                    <input maxlength="500" name="versionChangeSummary" [(ngModel)]="versionChangeSummary" [disabled]="!canWriteDocuments()" />
+                  </label>
+                  <button class="btn btn-primary" type="submit" [disabled]="!canWriteDocuments()">Subir version</button>
+                </form>
+
+                <div class="version-list">
+                  <article class="version-item" *ngFor="let version of detail.versions">
+                    <div>
+                      <strong>v{{ version.version_number }} - {{ version.file_name }}</strong>
+                      <span>{{ formatFileSize(version.file_size) }} - {{ version.created_at | date: 'dd/MM/yyyy HH:mm' }}</span>
+                      <p *ngIf="version.change_summary">{{ version.change_summary }}</p>
+                    </div>
+                    <button class="table-action" type="button" (click)="openVersionPreview(version)">Ver</button>
+                  </article>
+                </div>
+              </section>
+            </div>
+
+            <section class="detail-section audit-section">
+              <h3>Auditoria</h3>
+              <div class="audit-list">
+                <p class="empty-inline" *ngIf="detail.audit.length === 0">Sin eventos de auditoria.</p>
+                <article class="audit-item" *ngFor="let item of detail.audit">
+                  <strong>{{ auditActionLabel(item) }}</strong>
+                  <span>{{ item.created_at | date: 'dd/MM/yyyy HH:mm' }}</span>
+                </article>
+              </div>
+            </section>
           </article>
 
           <p class="msg panel-msg" *ngIf="documentsMessage()">{{ documentsMessage() }}</p>
@@ -570,6 +701,77 @@
             No hay categorias para la busqueda actual.
           </p>
           <p class="msg panel-msg" *ngIf="categoryMessage()">{{ categoryMessage() }}</p>
+        </section>
+
+        <section class="surface" *ngIf="activePanel() === 'members'">
+          <div class="panel-header with-action">
+            <div>
+              <h1>Miembros</h1>
+              <p>Administra accesos y roles de la organizacion.</p>
+            </div>
+          </div>
+
+          <form class="members-form" (ngSubmit)="inviteMember()">
+            <label class="field">
+              <span>Correo</span>
+              <input type="email" required name="inviteEmail" [(ngModel)]="inviteEmail" [disabled]="!canManageMembers()" />
+            </label>
+            <label class="field">
+              <span>Rol</span>
+              <select name="inviteRole" [(ngModel)]="inviteRole" [disabled]="!canManageMembers()">
+                <option value="viewer">Viewer</option>
+                <option value="member">Member</option>
+                <option value="admin">Admin</option>
+                <option value="owner">Owner</option>
+              </select>
+            </label>
+            <div class="form-actions">
+              <button class="btn btn-primary" type="submit" [disabled]="!canManageMembers()">
+                Agregar miembro
+              </button>
+            </div>
+          </form>
+
+          <article class="table-card">
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Usuario</th>
+                    <th>Correo</th>
+                    <th>Rol</th>
+                    <th>Alta</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr class="empty-row" *ngIf="members().length === 0">
+                    <td colspan="5">Sin miembros cargados.</td>
+                  </tr>
+                  <tr *ngFor="let member of members()">
+                    <td class="doc-title">{{ memberDisplayName(member) }}</td>
+                    <td>{{ member.email || 'Sin correo' }}</td>
+                    <td>
+                      <select class="inline-select" [value]="member.role" (change)="updateMemberRole(member, $event)" [disabled]="!canManageMembers()">
+                        <option value="viewer">Viewer</option>
+                        <option value="member">Member</option>
+                        <option value="admin">Admin</option>
+                        <option value="owner">Owner</option>
+                      </select>
+                    </td>
+                    <td>{{ member.joined_at | date: 'dd/MM/yyyy' }}</td>
+                    <td>
+                      <button class="table-action danger-action" type="button" (click)="removeMember(member)" [disabled]="!canManageMembers()">
+                        Quitar
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+
+          <p class="msg panel-msg" *ngIf="membersMessage()">{{ membersMessage() }}</p>
         </section>
         </ng-container>
       </section>

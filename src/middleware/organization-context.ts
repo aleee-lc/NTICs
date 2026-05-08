@@ -111,6 +111,13 @@ export function resolveUserIdFromRequest(req: Request): string | null {
   return null;
 }
 
+export function hasOrganizationRole(
+  context: OrganizationContext,
+  allowedRoles: OrganizationContext["membershipRole"][],
+): boolean {
+  return allowedRoles.includes(context.membershipRole);
+}
+
 function resolveOrganizationId(req: Request): string | null {
   const headerOrganizationId = req.header("x-organization-id");
   if (headerOrganizationId?.trim()) {

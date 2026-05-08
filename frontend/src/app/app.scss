@@ -913,6 +913,7 @@ tbody tr:hover td {
   cursor: pointer;
   font-size: 0.8rem;
   font-weight: 700;
+  margin-right: 6px;
 }
 
 .table-action:hover {
@@ -965,6 +966,148 @@ tbody tr:hover td {
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 16px;
+}
+
+.danger-action {
+  color: #9a2525 !important;
+  border-color: #ebcbcb !important;
+  background: #fff6f6 !important;
+}
+
+.detail-panel {
+  margin-top: 16px;
+  background: var(--color-surface);
+  border: 1px solid #d7e0ed;
+  border-radius: var(--radius-md);
+  padding: 16px;
+  display: grid;
+  gap: 16px;
+}
+
+.detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.detail-header h2 {
+  margin: 4px 0;
+  font-size: 1.55rem;
+}
+
+.detail-header p {
+  margin: 0;
+  color: var(--color-text-soft);
+}
+
+.detail-grid,
+.members-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.detail-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.detail-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 14px;
+}
+
+.detail-section {
+  border: 1px solid #e0e7f1;
+  border-radius: 12px;
+  background: #fbfdff;
+  padding: 14px;
+}
+
+.detail-section h3 {
+  margin: 0 0 12px;
+  font-size: 1.15rem;
+}
+
+.current-status {
+  margin: 0 0 12px;
+  color: #385171;
+  font-weight: 700;
+}
+
+.timeline,
+.version-list,
+.audit-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.timeline-item,
+.version-item,
+.audit-item {
+  border: 1px solid #e1e9f4;
+  border-radius: 10px;
+  background: #fff;
+  padding: 10px;
+}
+
+.timeline-item {
+  display: grid;
+  gap: 3px;
+}
+
+.timeline-item span,
+.timeline-item small,
+.version-item span,
+.audit-item span {
+  color: var(--color-text-soft);
+  font-size: 0.86rem;
+}
+
+.timeline-item p,
+.version-item p {
+  margin: 4px 0 0;
+  color: #3f5573;
+}
+
+.version-form {
+  display: grid;
+  gap: 10px;
+}
+
+.version-item,
+.audit-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+
+.version-item div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.version-item strong {
+  white-space: normal;
+}
+
+.audit-section {
+  overflow: hidden;
+}
+
+.empty-inline {
+  margin: 0;
+  color: var(--color-text-soft);
+}
+
+.inline-select {
+  min-width: 130px;
+  padding: 7px 9px;
 }
 
 .compact-field {
@@ -1164,8 +1307,18 @@ tbody tr:hover td {
 
   .upload-grid,
   .category-form-grid,
-  .category-grid {
+  .category-grid,
+  .detail-grid,
+  .detail-columns,
+  .members-form {
     grid-template-columns: 1fr;
+  }
+
+  .detail-header,
+  .version-item,
+  .audit-item {
+    flex-direction: column;
+    align-items: flex-start;
   }
 
   th,

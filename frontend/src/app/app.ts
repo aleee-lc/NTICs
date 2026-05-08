@@ -6,9 +6,10 @@ import { createClient, type Session, type SupabaseClient } from '@supabase/supab
 import { firstValueFrom, timeout } from 'rxjs';
 import { environment } from '../environments/environment';
 
-type PanelId = 'overview' | 'documents' | 'upload' | 'categories';
+type PanelId = 'overview' | 'documents' | 'upload' | 'categories' | 'members';
 type AuthView = 'login' | 'register';
 type DocumentStatus = 'draft' | 'in_review' | 'approved' | 'rejected' | 'archived';
+type OrganizationRole = 'owner' | 'admin' | 'member' | 'viewer';
 
 interface PublicConfig {
   supabaseUrl: string | null;
@@ -20,9 +21,17 @@ interface OrganizationItem {
   id: string;
   name: string;
   slug: string;
-  role: 'owner' | 'admin' | 'member' | 'viewer';
+  role: OrganizationRole;
   created_at: string;
   joined_at?: string;
+}
+
+interface OrganizationMember {
+  user_id: string;
+  role: OrganizationRole;
+  joined_at: string;
+  email: string | null;
+  full_name: string | null;
 }
 
 interface CategoryItem {
@@ -55,6 +64,46 @@ interface CategoryDeleteResponse {
   unlinkedDocuments: number;
 }
 
+interface DocumentVersionItem {
+  id: string;
+  version_number: number;
+  storage_path: string;
+  file_name: string;
+  mime_type: string | null;
+  file_size: number | null;
+  change_summary: string | null;
+  uploaded_by: string;
+  uploaded_by_email?: string | null;
+  uploaded_by_name?: string | null;
+  created_at: string;
+}
+
+interface DocumentApprovalItem {
+  id: string;
+  reviewer_id: string;
+  reviewer_email: string | null;
+  reviewer_name: string | null;
+  decision: DocumentStatus;
+  comments: string | null;
+  reviewed_at: string;
+  step_role_name?: string | null;
+}
+
+interface AuditLogItem {
+  id: number;
+  entity_type: string;
+  action: string;
+  actor_id: string | null;
+  created_at: string;
+}
+
+interface DocumentDetail extends DocumentItem {
+  current_file_size: number | null;
+  versions: DocumentVersionItem[];
+  approvals: DocumentApprovalItem[];
+  audit: AuditLogItem[];
+}
+
 @Component({
   selector: 'app-root',
   imports: [CommonModule, FormsModule],
@@ -75,10 +124,14 @@ export class App implements OnInit, OnDestroy {
   readonly configError = signal('');
   readonly session = signal<Session | null>(null);
   readonly organizations = signal<OrganizationItem[]>([]);
+  readonly members = signal<OrganizationMember[]>([]);
   readonly activeOrganizationId = signal('');
   readonly organizationsMessage = signal('');
+  readonly membersMessage = signal('');
   readonly categories = signal<CategoryItem[]>([]);
   readonly documents = signal<DocumentItem[]>([]);
+  readonly selectedDocument = signal<DocumentDetail | null>(null);
+  readonly isLoadingDocumentDetail = signal(false);
   readonly searchTerm = signal('');
   readonly documentCategoryFilter = signal('');
   readonly isCategoryFormOpen = signal(false);
@@ -91,6 +144,15 @@ export class App implements OnInit, OnDestroy {
 
   readonly activeOrganization = computed(() =>
     this.organizations().find((organization) => organization.id === this.activeOrganizationId()) ?? null,
+  );
+  readonly canManageMembers = computed(() =>
+    ['owner', 'admin'].includes(this.activeOrganization()?.role ?? ''),
+  );
+  readonly canApproveDocuments = computed(() =>
+    ['owner', 'admin'].includes(this.activeOrganization()?.role ?? ''),
+  );
+  readonly canWriteDocuments = computed(() =>
+    ['owner', 'admin', 'member'].includes(this.activeOrganization()?.role ?? ''),
   );
 
   readonly totalDocuments = computed(() => this.documents().length);
@@ -191,6 +253,17 @@ export class App implements OnInit, OnDestroy {
   categoryName = '';
   categoryDescription = '';
 
+  inviteEmail = '';
+  inviteRole: OrganizationRole = 'member';
+
+  detailTitle = '';
+  detailDescription = '';
+  detailCategoryId = '';
+  detailStatus: DocumentStatus = 'draft';
+  approvalComments = '';
+  versionChangeSummary = '';
+  selectedVersionFile: File | null = null;
+
   private supabase: SupabaseClient | null = null;
   private storageBucket = 'documentos';
   private unsubscribeAuth: (() => void) | null = null;
@@ -246,7 +319,12 @@ export class App implements OnInit, OnDestroy {
     this.activePanel.set(panel);
     this.documentsMessage.set('');
     this.categoryMessage.set('');
+    this.membersMessage.set('');
     this.isUserMenuOpen.set(false);
+
+    if (panel === 'members') {
+      void this.loadMembers();
+    }
   }
 
   toggleSidebar(): void {
@@ -281,13 +359,17 @@ export class App implements OnInit, OnDestroy {
     this.cancelCategoryForm();
     this.documentCategoryFilter.set('');
     this.resetUploadForm();
+    this.resetDocumentDetail();
+    this.members.set([]);
     this.documentsMessage.set('');
     this.uploadMessage.set('');
     this.categoryMessage.set('');
+    this.membersMessage.set('');
 
     if (!organizationId) {
       this.categories.set([]);
       this.documents.set([]);
+      this.members.set([]);
       this.organizationsMessage.set('Selecciona una organizacion para continuar.');
       return;
     }
@@ -345,7 +427,7 @@ export class App implements OnInit, OnDestroy {
   }
 
   organizationRoleLabel(role: OrganizationItem['role']): string {
-    const labels: Record<OrganizationItem['role'], string> = {
+    const labels: Record<OrganizationRole, string> = {
       owner: 'Owner',
       admin: 'Admin',
       member: 'Member',
@@ -353,6 +435,10 @@ export class App implements OnInit, OnDestroy {
     };
 
     return labels[role];
+  }
+
+  memberDisplayName(member: OrganizationMember): string {
+    return member.full_name || member.email || `Usuario ${member.user_id.slice(0, 6)}`;
   }
 
   async login(): Promise<void> {
@@ -494,10 +580,13 @@ export class App implements OnInit, OnDestroy {
     if (!this.activeOrganizationId()) {
       this.categories.set([]);
       this.documents.set([]);
+      this.members.set([]);
+      this.resetDocumentDetail();
       this.documentCategoryFilter.set('');
       this.uploadMessage.set('Selecciona una organizacion para subir documentos.');
       this.documentsMessage.set('Selecciona una organizacion para cargar documentos.');
       this.categoryMessage.set('Selecciona una organizacion para administrar categorias.');
+      this.membersMessage.set('Selecciona una organizacion para administrar miembros.');
       return;
     }
 
@@ -507,8 +596,118 @@ export class App implements OnInit, OnDestroy {
       this.documents.set(documents);
       this.uploadMessage.set('');
       this.documentsMessage.set('');
+      const selected = this.selectedDocument();
+      if (selected) {
+        const stillExists = documents.some((document) => document.id === selected.id);
+        if (stillExists) {
+          await this.openDocumentDetail(selected.id, false);
+        } else {
+          this.resetDocumentDetail();
+        }
+      }
     } catch (error) {
       this.uploadMessage.set(this.readError(error));
+    }
+  }
+
+  async loadMembers(): Promise<void> {
+    if (!this.activeOrganizationId() || !this.session()) {
+      this.members.set([]);
+      this.membersMessage.set('Selecciona una organizacion para ver miembros.');
+      return;
+    }
+
+    try {
+      const response = await firstValueFrom(
+        this.http
+          .get<{ items: OrganizationMember[] }>(
+            `${this.apiBase}/api/organizations/${this.activeOrganizationId()}/members`,
+            { headers: this.authHeaders() },
+          )
+          .pipe(timeout(App.HTTP_TIMEOUT_MS)),
+      );
+
+      this.members.set(response.items ?? []);
+      this.membersMessage.set('');
+    } catch (error) {
+      this.membersMessage.set(this.readError(error));
+    }
+  }
+
+  async inviteMember(): Promise<void> {
+    if (!this.activeOrganizationId()) {
+      this.membersMessage.set('Selecciona una organizacion para invitar miembros.');
+      return;
+    }
+
+    const email = this.inviteEmail.trim().toLowerCase();
+    if (!email) {
+      this.membersMessage.set('Captura el correo del usuario.');
+      return;
+    }
+
+    try {
+      this.membersMessage.set('Agregando miembro...');
+      await firstValueFrom(
+        this.http
+          .post(
+            `${this.apiBase}/api/organizations/${this.activeOrganizationId()}/members`,
+            { email, role: this.inviteRole },
+            { headers: this.authHeaders() },
+          )
+          .pipe(timeout(App.HTTP_TIMEOUT_MS)),
+      );
+
+      this.inviteEmail = '';
+      this.inviteRole = 'member';
+      await this.loadMembers();
+      this.membersMessage.set('Miembro agregado o actualizado.');
+    } catch (error) {
+      this.membersMessage.set(this.readError(error));
+    }
+  }
+
+  async updateMemberRole(member: OrganizationMember, event: Event): Promise<void> {
+    const select = event.target as HTMLSelectElement;
+    const nextRole = select.value as OrganizationRole;
+
+    try {
+      await firstValueFrom(
+        this.http
+          .patch(
+            `${this.apiBase}/api/organizations/${this.activeOrganizationId()}/members/${member.user_id}`,
+            { role: nextRole },
+            { headers: this.authHeaders() },
+          )
+          .pipe(timeout(App.HTTP_TIMEOUT_MS)),
+      );
+      await this.loadMembers();
+      await this.loadOrganizations();
+      this.membersMessage.set('Rol actualizado.');
+    } catch (error) {
+      this.membersMessage.set(this.readError(error));
+      await this.loadMembers();
+    }
+  }
+
+  async removeMember(member: OrganizationMember): Promise<void> {
+    const confirmed = window.confirm(`Quitar a ${this.memberDisplayName(member)} de la organizacion.`);
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      await firstValueFrom(
+        this.http
+          .delete(`${this.apiBase}/api/organizations/${this.activeOrganizationId()}/members/${member.user_id}`, {
+            headers: this.authHeaders(),
+          })
+          .pipe(timeout(App.HTTP_TIMEOUT_MS)),
+      );
+      await this.loadMembers();
+      this.membersMessage.set('Miembro eliminado.');
+    } catch (error) {
+      this.membersMessage.set(this.readError(error));
     }
   }
 
@@ -731,6 +930,217 @@ export class App implements OnInit, OnDestroy {
     window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
   }
 
+  async openVersionPreview(version: DocumentVersionItem): Promise<void> {
+    if (!this.supabase) return;
+
+    const { data, error } = await this.supabase.storage
+      .from(this.storageBucket)
+      .createSignedUrl(version.storage_path, 60 * 15);
+
+    if (error || !data?.signedUrl) {
+      this.documentsMessage.set(error?.message || 'No se pudo generar la URL de la version.');
+      return;
+    }
+
+    window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
+  }
+
+  async openDocumentDetail(documentId: string, showPanel = true): Promise<void> {
+    if (!this.activeOrganizationId()) {
+      return;
+    }
+
+    this.isLoadingDocumentDetail.set(true);
+    this.documentsMessage.set('');
+
+    try {
+      const detail = await firstValueFrom(
+        this.http
+          .get<DocumentDetail>(`${this.apiBase}/api/documents/${documentId}`, {
+            headers: this.authHeaders(true),
+          })
+          .pipe(timeout(App.HTTP_TIMEOUT_MS)),
+      );
+
+      this.selectedDocument.set(detail);
+      this.detailTitle = detail.title;
+      this.detailDescription = detail.description ?? '';
+      this.detailCategoryId = detail.category_id ?? '';
+      this.detailStatus = detail.status;
+      this.approvalComments = '';
+      this.versionChangeSummary = '';
+      this.selectedVersionFile = null;
+      if (showPanel) {
+        this.activePanel.set('documents');
+      }
+    } catch (error) {
+      this.documentsMessage.set(this.readError(error));
+    } finally {
+      this.isLoadingDocumentDetail.set(false);
+    }
+  }
+
+  closeDocumentDetail(): void {
+    this.resetDocumentDetail();
+  }
+
+  async saveDocumentDetail(): Promise<void> {
+    const document = this.selectedDocument();
+    if (!document) return;
+
+    try {
+      this.documentsMessage.set('Guardando documento...');
+      await firstValueFrom(
+        this.http
+          .put(
+            `${this.apiBase}/api/documents/${document.id}`,
+            {
+              title: this.detailTitle.trim(),
+              description: this.detailDescription.trim() || undefined,
+              categoryId: this.detailCategoryId || null,
+            },
+            { headers: this.authHeaders(true) },
+          )
+          .pipe(timeout(App.HTTP_TIMEOUT_MS)),
+      );
+
+      await this.refreshData();
+      this.documentsMessage.set('Documento actualizado.');
+    } catch (error) {
+      this.documentsMessage.set(this.readError(error));
+    }
+  }
+
+  async changeDocumentStatus(status: DocumentStatus): Promise<void> {
+    const document = this.selectedDocument();
+    if (!document) return;
+
+    try {
+      this.documentsMessage.set('Actualizando estado...');
+      await firstValueFrom(
+        this.http
+          .patch(
+            `${this.apiBase}/api/documents/${document.id}/status`,
+            {
+              status,
+              comments: this.approvalComments.trim() || undefined,
+            },
+            { headers: this.authHeaders(true) },
+          )
+          .pipe(timeout(App.HTTP_TIMEOUT_MS)),
+      );
+
+      await this.refreshData();
+      this.approvalComments = '';
+      this.documentsMessage.set('Estado actualizado.');
+    } catch (error) {
+      this.documentsMessage.set(this.readError(error));
+    }
+  }
+
+  onVersionFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.selectedVersionFile = input.files?.[0] ?? null;
+  }
+
+  async uploadDocumentVersion(): Promise<void> {
+    if (!this.supabase) return;
+    const document = this.selectedDocument();
+    const currentSession = this.session();
+    const organizationId = this.activeOrganizationId();
+
+    if (!document || !currentSession || !organizationId) {
+      return;
+    }
+
+    if (!this.selectedVersionFile) {
+      this.documentsMessage.set('Selecciona un archivo para la nueva version.');
+      return;
+    }
+
+    try {
+      this.documentsMessage.set('Subiendo nueva version...');
+      const storagePath = this.buildStoragePath(
+        organizationId,
+        currentSession.user.id,
+        this.selectedVersionFile.name,
+      );
+
+      const { error: storageError } = await this.supabase.storage
+        .from(this.storageBucket)
+        .upload(storagePath, this.selectedVersionFile, { upsert: false });
+
+      if (storageError) {
+        throw new Error(`Storage: ${storageError.message}`);
+      }
+
+      await firstValueFrom(
+        this.http
+          .post(
+            `${this.apiBase}/api/documents/${document.id}/versions`,
+            {
+              storagePath,
+              fileName: this.selectedVersionFile.name,
+              mimeType: this.selectedVersionFile.type || undefined,
+              fileSize: this.selectedVersionFile.size,
+              changeSummary: this.versionChangeSummary.trim() || undefined,
+            },
+            { headers: this.authHeaders(true) },
+          )
+          .pipe(timeout(App.HTTP_TIMEOUT_MS)),
+      );
+
+      this.selectedVersionFile = null;
+      this.versionChangeSummary = '';
+      await this.refreshData();
+      this.documentsMessage.set('Nueva version registrada.');
+    } catch (error) {
+      this.documentsMessage.set(this.readError(error));
+    }
+  }
+
+  async deleteSelectedDocument(): Promise<void> {
+    const document = this.selectedDocument();
+    if (!document) return;
+
+    const confirmed = window.confirm(`Eliminar documento "${document.title}". Esta accion no se puede deshacer.`);
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      await firstValueFrom(
+        this.http
+          .delete(`${this.apiBase}/api/documents/${document.id}`, {
+            headers: this.authHeaders(true),
+          })
+          .pipe(timeout(App.HTTP_TIMEOUT_MS)),
+      );
+      this.resetDocumentDetail();
+      await this.refreshData();
+      this.documentsMessage.set('Documento eliminado.');
+    } catch (error) {
+      this.documentsMessage.set(this.readError(error));
+    }
+  }
+
+  formatFileSize(size: number | null | undefined): string {
+    if (!size) {
+      return 'Sin tamano';
+    }
+
+    if (size < 1024 * 1024) {
+      return `${Math.round(size / 1024)} KB`;
+    }
+
+    return `${(size / 1024 / 1024).toFixed(1)} MB`;
+  }
+
+  auditActionLabel(item: AuditLogItem): string {
+    const entity = item.entity_type.replaceAll('_', ' ');
+    return `${item.action} - ${entity}`;
+  }
+
   statusLabel(status: DocumentStatus): string {
     const labels: Record<DocumentStatus, string> = {
       draft: 'Borrador',
@@ -758,6 +1168,11 @@ export class App implements OnInit, OnDestroy {
     }
 
     return `ID ${value.slice(0, 6)}`;
+  }
+
+  userIdLabel(userId: string | null | undefined): string {
+    const value = userId?.trim() ?? '';
+    return value ? `ID ${value.slice(0, 6)}` : 'Usuario';
   }
 
   private async loadPublicConfig(): Promise<PublicConfig> {
@@ -802,11 +1217,14 @@ export class App implements OnInit, OnDestroy {
 
   private resetOrganizationContext(): void {
     this.organizations.set([]);
+    this.members.set([]);
     this.activeOrganizationId.set('');
     this.organizationsMessage.set('');
+    this.membersMessage.set('');
     this.documentCategoryFilter.set('');
     this.categories.set([]);
     this.documents.set([]);
+    this.resetDocumentDetail();
   }
 
   private async loadOrganizations(): Promise<void> {
@@ -951,6 +1369,17 @@ export class App implements OnInit, OnDestroy {
     this.docCategoryId = '';
     this.docChangeSummary = 'Version inicial';
     this.selectedFile = null;
+  }
+
+  private resetDocumentDetail(): void {
+    this.selectedDocument.set(null);
+    this.detailTitle = '';
+    this.detailDescription = '';
+    this.detailCategoryId = '';
+    this.detailStatus = 'draft';
+    this.approvalComments = '';
+    this.versionChangeSummary = '';
+    this.selectedVersionFile = null;
   }
 
   private readError(error: unknown): string {
