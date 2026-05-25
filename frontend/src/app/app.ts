@@ -1006,11 +1006,15 @@ export class App implements OnInit, OnDestroy {
       return;
     }
 
+    const previewWindow = this.openPreviewWindow();
+    this.documentsMessage.set('Abriendo preview...');
+
     const { data, error } = await this.supabase.storage
       .from(this.storageBucket)
       .createSignedUrl(document.current_storage_path, 60 * 15);
 
     if (error || !data?.signedUrl) {
+      previewWindow?.close();
       this.documentsMessage.set(
         error?.message || 'No se pudo generar la URL de preview del documento.',
       );
@@ -1018,22 +1022,27 @@ export class App implements OnInit, OnDestroy {
     }
 
     this.documentsMessage.set('');
-    window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
+    this.navigatePreviewWindow(previewWindow, data.signedUrl);
   }
 
   async openVersionPreview(version: DocumentVersionItem): Promise<void> {
     if (!this.supabase) return;
+
+    const previewWindow = this.openPreviewWindow();
+    this.documentsMessage.set('Abriendo version...');
 
     const { data, error } = await this.supabase.storage
       .from(this.storageBucket)
       .createSignedUrl(version.storage_path, 60 * 15);
 
     if (error || !data?.signedUrl) {
+      previewWindow?.close();
       this.documentsMessage.set(error?.message || 'No se pudo generar la URL de la version.');
       return;
     }
 
-    window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
+    this.documentsMessage.set('');
+    this.navigatePreviewWindow(previewWindow, data.signedUrl);
   }
 
   async openDocumentDetail(documentId: string, showPanel = true): Promise<void> {
@@ -1486,6 +1495,33 @@ export class App implements OnInit, OnDestroy {
   private buildStoragePath(organizationId: string, userId: string, fileName: string): string {
     const sanitized = fileName.toLowerCase().replace(/[^a-z0-9._-]/g, '-');
     return `organizations/${organizationId}/${userId}/${Date.now()}-${sanitized}`;
+  }
+
+  private openPreviewWindow(): Window | null {
+    const previewWindow = window.open('', '_blank');
+
+    if (!previewWindow) {
+      return null;
+    }
+
+    previewWindow.document.title = 'PaperHub Preview';
+    previewWindow.document.body.style.margin = '0';
+    previewWindow.document.body.style.fontFamily = 'Manrope, Segoe UI, sans-serif';
+    previewWindow.document.body.style.background = '#edf3fb';
+    previewWindow.document.body.style.color = '#10203a';
+    previewWindow.document.body.innerHTML =
+      '<div style="min-height:100vh;display:grid;place-items:center;padding:24px;text-align:center;">Abriendo preview...</div>';
+
+    return previewWindow;
+  }
+
+  private navigatePreviewWindow(previewWindow: Window | null, signedUrl: string): void {
+    if (previewWindow) {
+      previewWindow.location.href = signedUrl;
+      return;
+    }
+
+    window.location.href = signedUrl;
   }
 
   private resetUploadForm(): void {
