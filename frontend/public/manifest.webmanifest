@@ -1,0 +1,19 @@
+{
+  "name": "PaperHub",
+  "short_name": "PaperHub",
+  "description": "Sistema de gestion documental empresarial.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#edf3fb",
+  "theme_color": "#11305c",
+  "icons": [
+    {
+      "src": "/paperhub-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
