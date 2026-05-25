@@ -29,13 +29,20 @@ SUPABASE_URL=https://nqygutjxnwzgkbpwiqjw.supabase.co
 SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY
 SUPABASE_STORAGE_BUCKET=documentos
 RESEND_API_KEY=YOUR_RESEND_API_KEY
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=465
+SMTP_SECURE=true
+SMTP_USER=tu-correo@gmail.com
+SMTP_PASS=TU_APP_PASSWORD_DE_GMAIL
 MAIL_FROM=PaperHub <onboarding@resend.dev>
 APP_URL=http://localhost:4200
 ```
 
-`RESEND_API_KEY` es opcional. Si no esta configurada, agregar miembros sigue funcionando,
-pero no se envia correo. En produccion cambia `APP_URL` por tu URL de Netlify y `MAIL_FROM`
-por un remitente verificado en Resend.
+El envio de correo es opcional. Para Gmail SMTP configura `SMTP_HOST`, `SMTP_USER`,
+`SMTP_PASS`, `MAIL_FROM` y `APP_URL`. `SMTP_PASS` debe ser una App Password de Gmail,
+no la contrasena normal de tu cuenta. Si no configuras SMTP, el backend puede usar
+`RESEND_API_KEY` como fallback. Si no configuras ningun proveedor, agregar miembros sigue
+funcionando, pero no se envia correo.
 
 ## 3) Backend: instalar y ejecutar
 
