@@ -3,9 +3,9 @@
   <div class="bg-glow bg-glow-a" aria-hidden="true"></div>
   <div class="bg-glow bg-glow-b" aria-hidden="true"></div>
 
-  <section class="state-card" *ngIf="isLoading()">Cargando aplicacion...</section>
+  <section class="state-card" *ngIf="appView() === 'loading'">Cargando aplicacion...</section>
 
-  <section class="state-card config-error" *ngIf="!isLoading() && configError()">
+  <section class="state-card config-error" *ngIf="appView() === 'config-error'">
     <p class="eyebrow">Configuracion faltante</p>
     <h1>No se pudo iniciar el frontend</h1>
     <p>{{ configError() }}</p>
@@ -15,7 +15,132 @@
     </p>
   </section>
 
-  <section class="auth-layout" *ngIf="!isLoading() && !configError() && !session()">
+  <!-- Landing Page -->
+  <section class="landing-layout" *ngIf="appView() === 'landing'">
+    <nav class="landing-nav">
+      <div class="landing-brand">
+        <img src="/paperhub-icon.png" alt="PaperHub" class="landing-brand-icon" />
+        <span>PaperHub</span>
+      </div>
+      <div class="landing-nav-actions">
+        <button class="btn btn-ghost" type="button" (click)="goToAuth('login')">Iniciar sesion</button>
+        <button class="btn btn-primary" type="button" (click)="goToAuth('register')">Empezar gratis</button>
+      </div>
+    </nav>
+
+    <div class="landing-hero">
+      <div class="landing-hero-content">
+        <div class="landing-badge">Sistema de Gestion Documental</div>
+        <h1 class="landing-headline">Gestiona documentos empresariales con control total</h1>
+        <p class="landing-subhead">
+          Centraliza, versiona y aprueba documentos de tu empresa. Flujos de trabajo, auditoria completa y acceso por roles.
+        </p>
+        <div class="landing-ctas">
+          <button class="btn btn-hero-primary" type="button" (click)="goToAuth('register')">
+            Crear cuenta gratis
+          </button>
+          <button class="btn btn-hero-outline" type="button" (click)="goToAuth('login')">
+            Iniciar sesion
+          </button>
+        </div>
+      </div>
+
+      <div class="landing-preview" aria-hidden="true">
+        <div class="preview-window">
+          <div class="preview-bar">
+            <span class="preview-dot dot-red"></span>
+            <span class="preview-dot dot-yellow"></span>
+            <span class="preview-dot dot-green"></span>
+            <span class="preview-bar-title">PaperHub — Panel de Control</span>
+          </div>
+          <div class="preview-content">
+            <div class="preview-stat-row">
+              <div class="preview-stat">
+                <span class="preview-stat-num">48</span>
+                <span>Documentos</span>
+              </div>
+              <div class="preview-stat">
+                <span class="preview-stat-num">7</span>
+                <span>En revision</span>
+              </div>
+              <div class="preview-stat">
+                <span class="preview-stat-num">35</span>
+                <span>Aprobados</span>
+              </div>
+            </div>
+            <div class="preview-list">
+              <div class="preview-row">
+                <div class="preview-title-bar long"></div>
+                <span class="preview-pill approved-pill">Aprobado</span>
+              </div>
+              <div class="preview-row">
+                <div class="preview-title-bar medium"></div>
+                <span class="preview-pill pending-pill">Pendiente</span>
+              </div>
+              <div class="preview-row">
+                <div class="preview-title-bar short"></div>
+                <span class="preview-pill draft-pill">Borrador</span>
+              </div>
+              <div class="preview-row">
+                <div class="preview-title-bar long2"></div>
+                <span class="preview-pill approved-pill">Aprobado</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="landing-features">
+      <article class="feature-card">
+        <div class="feature-icon feat-blue">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6 3h9l5 5v13H6zM14 4.5V9h4.5M9 13h8M9 17h6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </div>
+        <h3>Versionado completo</h3>
+        <p>Historial de cada version por documento. Nunca pierdas un cambio.</p>
+      </article>
+      <article class="feature-card">
+        <div class="feature-icon feat-green">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M9 12l2 2 4-4m6 2a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </div>
+        <h3>Flujo de aprobacion</h3>
+        <p>Envio a revision, aprobacion y rechazo con comentarios del revisor.</p>
+      </article>
+      <article class="feature-card">
+        <div class="feature-icon feat-purple">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </div>
+        <h3>Auditoria completa</h3>
+        <p>Registro detallado de quien hizo que y cuando en cada documento.</p>
+      </article>
+      <article class="feature-card">
+        <div class="feature-icon feat-orange">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm14 10v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </div>
+        <h3>Multi-empresa</h3>
+        <p>Gestiona varias organizaciones con roles y permisos independientes.</p>
+      </article>
+    </div>
+
+    <div class="landing-footer-cta">
+      <h2>Empieza a organizar tus documentos hoy</h2>
+      <p>Gratis, sin tarjeta de credito. Listo en minutos.</p>
+      <button class="btn btn-hero-primary" type="button" (click)="goToAuth('register')">
+        Crear cuenta gratis
+      </button>
+    </div>
+  </section>
+
+  <!-- Auth -->
+  <section class="auth-layout" *ngIf="appView() === 'auth'">
     <article class="auth-card">
       <div class="auth-brand">
         <img class="auth-brand-logo" src="/paperhub-icon.png" alt="PaperHub" />
@@ -124,10 +249,100 @@
     </article>
   </section>
 
+  <!-- Onboarding -->
+  <section class="onboarding-layout" *ngIf="appView() === 'onboarding'">
+    <div class="onboarding-topbar">
+      <div class="onboarding-brand">
+        <img src="/paperhub-icon.png" alt="PaperHub" class="onboarding-brand-icon" />
+        <span>PaperHub</span>
+      </div>
+      <button class="btn btn-outline" type="button" (click)="logout()">Cerrar sesion</button>
+    </div>
+
+    <article class="onboarding-card">
+      <div class="onboarding-welcome">
+        <div class="onboarding-avatar">{{ currentUserInitials() }}</div>
+        <div>
+          <h1>Bienvenido, {{ currentUserName() }}</h1>
+          <p>Tu cuenta esta lista. Para continuar, crea una organizacion o espera a que te inviten a una existente.</p>
+        </div>
+      </div>
+
+      <div class="onboarding-choices" *ngIf="onboardingView() === 'choice'">
+        <button class="choice-card" type="button" (click)="onboardingView.set('create')">
+          <div class="choice-icon choice-blue">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+            </svg>
+          </div>
+          <h3>Crear organizacion</h3>
+          <p>Inicia tu propio espacio de trabajo para tu empresa o equipo.</p>
+          <span class="choice-cta">Comenzar &rarr;</span>
+        </button>
+        <button class="choice-card" type="button" (click)="onboardingView.set('invited')">
+          <div class="choice-icon choice-green">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm14 10v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </div>
+          <h3>Fui invitado</h3>
+          <p>Un administrador ya me va a agregar a una organizacion existente.</p>
+          <span class="choice-cta">Ver instrucciones &rarr;</span>
+        </button>
+      </div>
+
+      <div class="onboarding-create" *ngIf="onboardingView() === 'create'">
+        <h2>Nueva organizacion</h2>
+        <form (ngSubmit)="createFirstOrganization()">
+          <label class="field">
+            <span>Nombre de la organizacion</span>
+            <input
+              required
+              minlength="2"
+              maxlength="100"
+              name="newOrgName"
+              [(ngModel)]="newOrgName"
+              placeholder="Ej. Empresa XYZ, Equipo Contabilidad..."
+              [disabled]="isCreatingFirstOrg()"
+            />
+          </label>
+          <div class="form-actions onboarding-actions">
+            <button class="btn btn-primary" type="submit" [disabled]="isCreatingFirstOrg()">
+              {{ isCreatingFirstOrg() ? 'Creando...' : 'Crear organizacion' }}
+            </button>
+            <button class="btn btn-outline" type="button" (click)="onboardingView.set('choice')">
+              Volver
+            </button>
+          </div>
+          <p class="msg" *ngIf="organizationsMessage()">{{ organizationsMessage() }}</p>
+        </form>
+      </div>
+
+      <div class="onboarding-invited" *ngIf="onboardingView() === 'invited'">
+        <h2>Esperando invitacion</h2>
+        <div class="invited-info">
+          <p>Comparte este correo con el administrador de tu empresa para que te agregue:</p>
+          <div class="invited-email">{{ session()?.user?.email }}</div>
+          <p class="invited-hint">Una vez que te agreguen, haz clic en "Verificar acceso" para continuar.</p>
+        </div>
+        <div class="form-actions onboarding-actions">
+          <button class="btn btn-primary" type="button" (click)="refreshOrganizations()">
+            Verificar acceso
+          </button>
+          <button class="btn btn-outline" type="button" (click)="onboardingView.set('choice')">
+            Volver
+          </button>
+        </div>
+        <p class="msg" *ngIf="organizationsMessage()">{{ organizationsMessage() }}</p>
+      </div>
+    </article>
+  </section>
+
+  <!-- Workspace -->
   <section
     class="workspace"
     [class.sidebar-collapsed]="isSidebarCollapsed()"
-    *ngIf="!isLoading() && !configError() && session()"
+    *ngIf="appView() === 'workspace'"
   >
     <aside class="sidebar">
       <div class="sidebar-brand">
@@ -389,7 +604,7 @@
 
           <div class="filters-row">
             <label class="field compact-field">
-              <span>Filtrar por categoria</span>
+              <span>Categoria</span>
               <select
                 [ngModel]="documentCategoryFilter()"
                 (ngModelChange)="setDocumentCategoryFilter($event)"
@@ -398,6 +613,21 @@
                 <option *ngFor="let category of categories()" [value]="category.id">
                   {{ category.name }}
                 </option>
+              </select>
+            </label>
+
+            <label class="field compact-field">
+              <span>Estado</span>
+              <select
+                [ngModel]="documentStatusFilter()"
+                (ngModelChange)="setDocumentStatusFilter($event)"
+              >
+                <option value="">Todos</option>
+                <option value="draft">Borrador</option>
+                <option value="in_review">Pendiente</option>
+                <option value="approved">Aprobado</option>
+                <option value="rejected">Rechazado</option>
+                <option value="archived">Archivado</option>
               </select>
             </label>
 
@@ -617,7 +847,16 @@
             </label>
 
             <div class="full form-actions">
-              <button class="btn btn-primary" type="submit">Subir documento</button>
+              <button class="btn btn-primary" type="submit" [disabled]="uploadProgress() > 0 && uploadProgress() < 100">
+                {{ uploadProgress() > 0 && uploadProgress() < 100 ? 'Subiendo...' : 'Subir documento' }}
+              </button>
+            </div>
+
+            <div class="full upload-progress-wrap" *ngIf="uploadProgress() > 0">
+              <div class="upload-progress-bar">
+                <div class="upload-progress-fill" [style.width.%]="uploadProgress()"></div>
+              </div>
+              <span class="upload-progress-label">{{ uploadProgress() }}%</span>
             </div>
 
             <p class="msg panel-msg full" *ngIf="uploadMessage()">{{ uploadMessage() }}</p>

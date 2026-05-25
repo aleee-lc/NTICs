@@ -8,6 +8,8 @@ import { environment } from '../environments/environment';
 
 type PanelId = 'overview' | 'documents' | 'upload' | 'categories' | 'members';
 type AuthView = 'login' | 'register';
+type OnboardingView = 'choice' | 'create' | 'invited';
+type AppView = 'loading' | 'config-error' | 'landing' | 'auth' | 'onboarding' | 'workspace';
 type DocumentStatus = 'draft' | 'in_review' | 'approved' | 'rejected' | 'archived';
 type OrganizationRole = 'owner' | 'admin' | 'member' | 'viewer';
 
@@ -140,6 +142,12 @@ export class App implements OnInit, OnDestroy {
   readonly isCreatingOrganization = signal(false);
   readonly isUserMenuOpen = signal(false);
   readonly isSidebarCollapsed = signal(false);
+  readonly showLanding = signal(true);
+  readonly isLoadingOrgs = signal(false);
+  readonly isCreatingFirstOrg = signal(false);
+  readonly uploadProgress = signal(0);
+  readonly documentStatusFilter = signal('');
+  readonly onboardingView = signal<OnboardingView>('choice');
   readonly apiBase = environment.apiBaseUrl;
 
   readonly activeOrganization = computed(() =>
@@ -154,6 +162,14 @@ export class App implements OnInit, OnDestroy {
   readonly canWriteDocuments = computed(() =>
     ['owner', 'admin', 'member'].includes(this.activeOrganization()?.role ?? ''),
   );
+
+  readonly appView = computed((): AppView => {
+    if (this.isLoading()) return 'loading';
+    if (this.configError()) return 'config-error';
+    if (!this.session()) return this.showLanding() ? 'landing' : 'auth';
+    if (this.organizations().length === 0 && !this.isLoadingOrgs()) return 'onboarding';
+    return 'workspace';
+  });
 
   readonly totalDocuments = computed(() => this.documents().length);
   readonly inReviewDocuments = computed(
@@ -185,10 +201,12 @@ export class App implements OnInit, OnDestroy {
 
   readonly visibleDocuments = computed(() => {
     const categoryFilter = this.documentCategoryFilter();
+    const statusFilter = this.documentStatusFilter();
     const term = this.searchTerm().trim().toLowerCase();
 
     return this.documents()
       .filter((document) => !categoryFilter || document.category_id === categoryFilter)
+      .filter((document) => !statusFilter || document.status === statusFilter)
       .filter((document) => {
         if (!term) {
           return true;
@@ -263,6 +281,7 @@ export class App implements OnInit, OnDestroy {
   approvalComments = '';
   versionChangeSummary = '';
   selectedVersionFile: File | null = null;
+  newOrgName = '';
 
   private supabase: SupabaseClient | null = null;
   private storageBucket = 'documentos';
@@ -348,6 +367,54 @@ export class App implements OnInit, OnDestroy {
   clearDocumentFilters(): void {
     this.searchTerm.set('');
     this.documentCategoryFilter.set('');
+    this.documentStatusFilter.set('');
+  }
+
+  goToAuth(view: AuthView): void {
+    this.showLanding.set(false);
+    this.authView.set(view);
+    this.authMessage.set('');
+  }
+
+  setDocumentStatusFilter(value: string): void {
+    this.documentStatusFilter.set(value);
+  }
+
+  async refreshOrganizations(): Promise<void> {
+    this.organizationsMessage.set('Verificando acceso...');
+    await this.loadOrganizations();
+    if (this.organizations().length === 0) {
+      this.organizationsMessage.set('Aun no tienes acceso a ninguna organizacion.');
+    }
+  }
+
+  async createFirstOrganization(): Promise<void> {
+    const name = this.newOrgName.trim();
+    if (name.length < 2) {
+      this.organizationsMessage.set('El nombre debe tener al menos 2 caracteres.');
+      return;
+    }
+
+    this.isCreatingFirstOrg.set(true);
+    this.organizationsMessage.set('');
+
+    try {
+      const created = await firstValueFrom(
+        this.http
+          .post<OrganizationItem>(`${this.apiBase}/api/organizations`, { name }, { headers: this.authHeaders() })
+          .pipe(timeout(App.HTTP_TIMEOUT_MS)),
+      );
+
+      this.organizations.set([created]);
+      this.activeOrganizationId.set(created.id);
+      this.persistActiveOrganizationId(created.id);
+      this.newOrgName = '';
+      await this.refreshData();
+    } catch (error) {
+      this.organizationsMessage.set(this.readError(error));
+    } finally {
+      this.isCreatingFirstOrg.set(false);
+    }
   }
 
   onOrganizationChange(event: Event): void {
@@ -547,6 +614,7 @@ export class App implements OnInit, OnDestroy {
   async logout(): Promise<void> {
     if (!this.supabase) return;
     this.isUserMenuOpen.set(false);
+    this.showLanding.set(true);
     await this.supabase.auth.signOut();
   }
 
@@ -866,8 +934,21 @@ export class App implements OnInit, OnDestroy {
       return;
     }
 
+    const fileError = this.validateFile(this.selectedFile);
+    if (fileError) {
+      this.uploadMessage.set(fileError);
+      return;
+    }
+
+    let progressInterval: ReturnType<typeof setInterval> | null = null;
+
     try {
-      this.uploadMessage.set('Subiendo archivo a Supabase Storage...');
+      this.uploadProgress.set(8);
+      this.uploadMessage.set('Subiendo archivo...');
+      progressInterval = setInterval(() => {
+        this.uploadProgress.update((p) => Math.min(p + 4, 72));
+      }, 250);
+
       const storagePath = this.buildStoragePath(
         organizationId,
         currentSession.user.id,
@@ -878,9 +959,15 @@ export class App implements OnInit, OnDestroy {
         .from(this.storageBucket)
         .upload(storagePath, this.selectedFile, { upsert: false });
 
+      clearInterval(progressInterval);
+      progressInterval = null;
+
       if (storageError) {
         throw new Error(`Storage: ${storageError.message}`);
       }
+
+      this.uploadProgress.set(85);
+      this.uploadMessage.set('Registrando documento...');
 
       const payload = {
         title: this.docTitle.trim(),
@@ -898,11 +985,15 @@ export class App implements OnInit, OnDestroy {
           headers: this.authHeaders(true),
         }),
       );
-      this.uploadMessage.set('Documento subido y registrado correctamente.');
+
+      this.uploadProgress.set(100);
+      this.uploadMessage.set('Documento subido correctamente.');
       this.resetUploadForm();
       await this.refreshData();
       this.openPanel('documents');
     } catch (error) {
+      if (progressInterval) clearInterval(progressInterval);
+      this.uploadProgress.set(0);
       this.uploadMessage.set(this.readError(error));
     }
   }
@@ -1222,40 +1313,74 @@ export class App implements OnInit, OnDestroy {
     this.organizationsMessage.set('');
     this.membersMessage.set('');
     this.documentCategoryFilter.set('');
+    this.documentStatusFilter.set('');
     this.categories.set([]);
     this.documents.set([]);
     this.resetDocumentDetail();
+    this.onboardingView.set('choice');
+    this.newOrgName = '';
   }
 
   private async loadOrganizations(): Promise<void> {
-    const response = await firstValueFrom(
-      this.http
-        .get<{ items: OrganizationItem[] }>(`${this.apiBase}/api/organizations`, {
-          headers: this.authHeaders(),
-        })
-        .pipe(timeout(App.HTTP_TIMEOUT_MS)),
-    );
-
-    const items = [...(response.items ?? [])].sort((a, b) =>
-      a.name.localeCompare(b.name, 'es', { sensitivity: 'base' }),
-    );
-
-    this.organizations.set(items);
-    this.applyActiveOrganizationFromStorage(items);
-
-    if (items.length === 0) {
-      this.organizationsMessage.set(
-        'No tienes organizaciones activas. Crea una para comenzar.',
+    this.isLoadingOrgs.set(true);
+    try {
+      const response = await firstValueFrom(
+        this.http
+          .get<{ items: OrganizationItem[] }>(`${this.apiBase}/api/organizations`, {
+            headers: this.authHeaders(),
+          })
+          .pipe(timeout(App.HTTP_TIMEOUT_MS)),
       );
-      return;
-    }
 
-    if (!this.activeOrganizationId()) {
-      this.organizationsMessage.set('Selecciona una organizacion para ver tus datos.');
-      return;
-    }
+      const items = [...(response.items ?? [])].sort((a, b) =>
+        a.name.localeCompare(b.name, 'es', { sensitivity: 'base' }),
+      );
 
-    this.organizationsMessage.set('');
+      this.organizations.set(items);
+      this.applyActiveOrganizationFromStorage(items);
+
+      if (items.length === 0) {
+        this.organizationsMessage.set('');
+        return;
+      }
+
+      if (!this.activeOrganizationId()) {
+        this.organizationsMessage.set('Selecciona una organizacion para ver tus datos.');
+        return;
+      }
+
+      this.organizationsMessage.set('');
+    } finally {
+      this.isLoadingOrgs.set(false);
+    }
+  }
+
+  private static readonly ALLOWED_MIME_TYPES = new Set([
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/vnd.ms-powerpoint',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    'text/plain',
+    'text/csv',
+    'image/png',
+    'image/jpeg',
+    'image/gif',
+    'image/webp',
+  ]);
+
+  private static readonly MAX_FILE_BYTES = 50 * 1024 * 1024;
+
+  private validateFile(file: File): string | null {
+    if (file.size > App.MAX_FILE_BYTES) {
+      return `El archivo supera el limite de 50 MB (${this.formatFileSize(file.size)}).`;
+    }
+    if (file.type && !App.ALLOWED_MIME_TYPES.has(file.type)) {
+      return 'Tipo de archivo no permitido. Se aceptan: PDF, Word, Excel, PowerPoint, texto, CSV e imagenes.';
+    }
+    return null;
   }
 
   private applyActiveOrganizationFromStorage(items: OrganizationItem[]): void {
@@ -1369,6 +1494,7 @@ export class App implements OnInit, OnDestroy {
     this.docCategoryId = '';
     this.docChangeSummary = 'Version inicial';
     this.selectedFile = null;
+    this.uploadProgress.set(0);
   }
 
   private resetDocumentDetail(): void {

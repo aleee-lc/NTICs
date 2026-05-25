@@ -8,7 +8,16 @@ import { organizationsRouter } from "./routes/organizations";
 
 const app = express();
 
-app.use(cors());
+const corsOptions = {
+  origin: [
+    "http://localhost:4200", // Desarrollo frontend
+    "http://localhost:3000", // Desarrollo backend
+    "https://paperhub-bypapulines.netlify.app", // Producción
+  ],
+  credentials: true,
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 
 app.get("/api", (_req, res) => {
