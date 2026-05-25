@@ -28,7 +28,14 @@ DATABASE_URL=postgresql://postgres.nqygutjxnwzgkbpwiqjw:YOUR_PASSWORD@aws-0-us-w
 SUPABASE_URL=https://nqygutjxnwzgkbpwiqjw.supabase.co
 SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY
 SUPABASE_STORAGE_BUCKET=documentos
+RESEND_API_KEY=YOUR_RESEND_API_KEY
+MAIL_FROM=PaperHub <onboarding@resend.dev>
+APP_URL=http://localhost:4200
 ```
+
+`RESEND_API_KEY` es opcional. Si no esta configurada, agregar miembros sigue funcionando,
+pero no se envia correo. En produccion cambia `APP_URL` por tu URL de Netlify y `MAIL_FROM`
+por un remitente verificado en Resend.
 
 ## 3) Backend: instalar y ejecutar
 

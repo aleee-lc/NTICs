@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { pool } from "../config/db";
 import { resolveUserIdFromRequest } from "../middleware/organization-context";
+import { sendOrganizationMemberEmail } from "../services/email";
 
 export const organizationsRouter = Router();
 
@@ -245,6 +246,17 @@ organizationsRouter.post("/:id/members", async (req, res, next) => {
       return res.status(403).json({ error: "Solo un owner puede asignar owners" });
     }
 
+    const organizationResult = await pool.query<{ name: string }>(
+      `
+      select name
+      from organizations
+      where id = $1
+      limit 1
+      `,
+      [parsedParams.data.id],
+    );
+    const organizationName = organizationResult.rows[0]?.name ?? "tu organizacion";
+
     const profileResult = await pool.query<{ id: string; email: string; full_name: string | null }>(
       `
       select id, email, full_name
@@ -272,6 +284,16 @@ organizationsRouter.post("/:id/members", async (req, res, next) => {
       `,
       [parsedParams.data.id, profile.id, parsedPayload.data.role],
     );
+
+    try {
+      await sendOrganizationMemberEmail({
+        to: profile.email,
+        organizationName,
+        role: parsedPayload.data.role,
+      });
+    } catch (emailError) {
+      console.warn("No se pudo enviar email de membresia:", emailError);
+    }
 
     res.status(201).json({
       ...memberResult.rows[0],

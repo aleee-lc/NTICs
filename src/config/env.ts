@@ -17,6 +17,9 @@ const envSchema = z.object({
   SUPABASE_URL: z.string().url().optional(),
   SUPABASE_ANON_KEY: z.string().min(1).optional(),
   SUPABASE_STORAGE_BUCKET: z.string().min(1).default("documentos"),
+  RESEND_API_KEY: z.string().min(1).optional(),
+  MAIL_FROM: z.string().min(1).default("PaperHub <onboarding@resend.dev>"),
+  APP_URL: z.string().url().default("http://localhost:4200"),
 });
 
 const parsedEnv = envSchema.safeParse(process.env);
