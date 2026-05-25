@@ -285,20 +285,18 @@ organizationsRouter.post("/:id/members", async (req, res, next) => {
       [parsedParams.data.id, profile.id, parsedPayload.data.role],
     );
 
-    try {
-      await sendOrganizationMemberEmail({
-        to: profile.email,
-        organizationName,
-        role: parsedPayload.data.role,
-      });
-    } catch (emailError) {
-      console.warn("No se pudo enviar email de membresia:", emailError);
-    }
-
     res.status(201).json({
       ...memberResult.rows[0],
       email: profile.email,
       full_name: profile.full_name,
+    });
+
+    void sendOrganizationMemberEmail({
+      to: profile.email,
+      organizationName,
+      role: parsedPayload.data.role,
+    }).catch((emailError: unknown) => {
+      console.warn("No se pudo enviar email de membresia:", emailError);
     });
   } catch (error) {
     next(error);

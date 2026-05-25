@@ -23,6 +23,7 @@ const envSchema = z.object({
   SMTP_SECURE: z.coerce.boolean().default(true),
   SMTP_USER: z.string().min(1).optional(),
   SMTP_PASS: z.string().min(1).optional(),
+  SMTP_TIMEOUT_MS: z.coerce.number().int().positive().default(8000),
   MAIL_FROM: z.string().min(1).default("PaperHub <onboarding@resend.dev>"),
   APP_URL: z.string().url().default("http://localhost:4200"),
 });
