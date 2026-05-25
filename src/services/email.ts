@@ -29,36 +29,62 @@ export async function sendOrganizationMemberEmail(
   const text = `Te agregaron a ${input.organizationName} en PaperHub con rol ${role}. Abre PaperHub: ${env.APP_URL}`;
 
   if (isSmtpConfigured()) {
-    const smtpHost = env.SMTP_HOST as string;
-    const smtpAddress = await resolveIpv4Address(smtpHost);
-    const smtpOptions: SMTPTransport.Options = {
-      host: smtpAddress,
-      port: env.SMTP_PORT,
-      secure: env.SMTP_SECURE,
-      connectionTimeout: env.SMTP_TIMEOUT_MS,
-      greetingTimeout: env.SMTP_TIMEOUT_MS,
-      socketTimeout: env.SMTP_TIMEOUT_MS,
-      tls: {
-        servername: smtpHost,
-      },
-      auth: {
-        user: env.SMTP_USER,
-        pass: env.SMTP_PASS,
-      },
-    };
-    const transporter = nodemailer.createTransport(smtpOptions);
+    try {
+      await sendWithSmtp({ to: input.to, subject, html, text });
+      return true;
+    } catch (smtpError) {
+      if (!env.RESEND_API_KEY) {
+        throw smtpError;
+      }
 
-    await transporter.sendMail({
-      from: env.MAIL_FROM,
-      to: input.to,
-      subject,
-      html,
-      text,
-    });
-
-    return true;
+      console.warn("SMTP no disponible, intentando Resend:", smtpError);
+    }
   }
 
+  await sendWithResend({ to: input.to, subject, html, text });
+  return true;
+}
+
+async function sendWithSmtp(input: {
+  to: string;
+  subject: string;
+  html: string;
+  text: string;
+}): Promise<void> {
+  const smtpHost = env.SMTP_HOST as string;
+  const smtpAddress = await resolveIpv4Address(smtpHost);
+  const smtpOptions: SMTPTransport.Options = {
+    host: smtpAddress,
+    port: env.SMTP_PORT,
+    secure: env.SMTP_SECURE,
+    connectionTimeout: env.SMTP_TIMEOUT_MS,
+    greetingTimeout: env.SMTP_TIMEOUT_MS,
+    socketTimeout: env.SMTP_TIMEOUT_MS,
+    tls: {
+      servername: smtpHost,
+    },
+    auth: {
+      user: env.SMTP_USER,
+      pass: env.SMTP_PASS,
+    },
+  };
+  const transporter = nodemailer.createTransport(smtpOptions);
+
+  await transporter.sendMail({
+    from: env.MAIL_FROM,
+    to: input.to,
+    subject: input.subject,
+    html: input.html,
+    text: input.text,
+  });
+}
+
+async function sendWithResend(input: {
+  to: string;
+  subject: string;
+  html: string;
+  text: string;
+}): Promise<void> {
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
@@ -68,9 +94,9 @@ export async function sendOrganizationMemberEmail(
     body: JSON.stringify({
       from: env.MAIL_FROM,
       to: [input.to],
-      subject,
-      html,
-      text,
+      subject: input.subject,
+      html: input.html,
+      text: input.text,
     }),
   });
 
@@ -78,8 +104,6 @@ export async function sendOrganizationMemberEmail(
     const details = await response.text().catch(() => "");
     throw new Error(`Resend respondio ${response.status}: ${details}`);
   }
-
-  return true;
 }
 
 function isSmtpConfigured(): boolean {
