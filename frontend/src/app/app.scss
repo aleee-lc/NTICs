@@ -575,6 +575,26 @@ textarea:focus {
   align-items: center;
 }
 
+.org-create-wrap {
+  position: relative;
+}
+
+.org-create-dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  width: 300px;
+  z-index: 30;
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  padding: 16px;
+  display: grid;
+  gap: 12px;
+  animation: fadeUp 180ms ease;
+}
+
 .icon-button {
   border: 1px solid #c8d6ea;
   color: #2f5684;
@@ -972,6 +992,31 @@ tbody tr:hover td {
   color: #9a2525 !important;
   border-color: #ebcbcb !important;
   background: #fff6f6 !important;
+}
+
+.detail-loading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+  padding: 14px 16px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text-soft);
+  font-size: 0.9rem;
+}
+
+.detail-loading-spinner {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  color: var(--color-brand-700);
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 .detail-panel {
@@ -2206,7 +2251,7 @@ tbody tr:hover td {
   }
 
   .sidebar-toggle,
-  .topbar-org-create {
+  .org-create-wrap {
     display: none;
   }
 

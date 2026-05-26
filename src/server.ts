@@ -8,12 +8,10 @@ import { organizationsRouter } from "./routes/organizations";
 
 const app = express();
 
+const corsOrigins = new Set(["http://localhost:4200", env.APP_URL]);
+
 const corsOptions = {
-  origin: [
-    "http://localhost:4200", // Desarrollo frontend
-    "http://localhost:3000", // Desarrollo backend
-    "https://paperhub-bypapulines.netlify.app", // Producción
-  ],
+  origin: [...corsOrigins],
   credentials: true,
 };
 

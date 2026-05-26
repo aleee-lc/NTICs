@@ -1,61 +1,60 @@
-# NTICs - Sistema de Gestion Documental Empresarial
+# PaperHub - Sistema de Gestión Documental Empresarial
 
-Starter backend para el proyecto del PDF con:
-- API REST en Node.js + Express + TypeScript.
-- Esquema PostgreSQL orientado a Supabase.
-- Soporte inicial para documentos, versiones, flujo de aprobacion y auditoria.
-- Frontend en Angular con login, dashboard y modulo de subida de documentos.
+Sistema full-stack para gestión de documentos empresariales con control de versiones, flujos de aprobación y multi-tenancy por organización.
 
-## 1) Configurar base de datos en Supabase
+**Stack:** Node.js + Express + TypeScript (backend) · Angular 21 (frontend) · PostgreSQL vía Supabase · Supabase Auth + Storage
 
-1. Crea un proyecto en Supabase.
-2. Ve a `SQL Editor`.
-3. Ejecuta el script: `supabase/migrations/20260310_001_init.sql`.
-4. Copia el connection string Postgres (URI) de Supabase.
+## Funcionalidades
 
-## 2) Configurar variables de entorno
+- Autenticación con Supabase Auth
+- Multi-tenancy: organizaciones con roles (`owner`, `admin`, `member`, `viewer`)
+- Gestión de categorías de documentos
+- Carga, versionado y descarga de documentos desde Supabase Storage
+- Flujo de aprobación: `draft → in_review → approved / rejected → archived`
+- Registro de auditoría por acción y organización
+- Notificaciones por correo al agregar miembros (SMTP Gmail o Resend como fallback)
 
-1. Copia `.env.example` a `.env`.
-2. Reemplaza `DATABASE_URL` con tu URI real de Supabase.
-3. Agrega `SUPABASE_URL` y `SUPABASE_ANON_KEY` (para login/upload en frontend).
+---
 
-Ejemplo:
+## Configuración
 
-```env
-NODE_ENV=development
-PORT=3000
-DATABASE_URL=postgresql://postgres.nqygutjxnwzgkbpwiqjw:YOUR_PASSWORD@aws-0-us-west-2.pooler.supabase.com:6543/postgres
-SUPABASE_URL=https://nqygutjxnwzgkbpwiqjw.supabase.co
-SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY
-SUPABASE_STORAGE_BUCKET=documentos
-RESEND_API_KEY=YOUR_RESEND_API_KEY
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_SECURE=false
-SMTP_USER=tu-correo@gmail.com
-SMTP_PASS=TU_APP_PASSWORD_DE_GMAIL
-MAIL_FROM=PaperHub <onboarding@resend.dev>
-APP_URL=http://localhost:4200
+### 1. Variables de entorno
+
+```bash
+cp .env.example .env
 ```
 
-El envio de correo es opcional. Para Gmail SMTP configura `SMTP_HOST`, `SMTP_USER`,
-`SMTP_PASS`, `MAIL_FROM` y `APP_URL`. `SMTP_PASS` debe ser una App Password de Gmail,
-no la contrasena normal de tu cuenta. Si no configuras SMTP, el backend puede usar
-`RESEND_API_KEY` como fallback. Si no configuras ningun proveedor, agregar miembros sigue
-funcionando, pero no se envia correo.
+Edita `.env` con tus valores reales de Supabase. Ver `.env.example` para la lista completa de variables.
 
-## 3) Backend: instalar y ejecutar
+### 2. Base de datos
+
+Ejecuta las migraciones en orden desde `supabase/migrations/` usando el SQL Editor de Supabase:
+
+```
+20260310_001_init.sql
+20260318_002_auth_users_integration.sql
+20260319_003_profiles_hardening.sql
+20260415_004_multitenant_organizations.sql
+20260504_005_audit_organization_context.sql
+20260525_006_storage_document_policies.sql
+```
+
+---
+
+## Desarrollo
+
+### Backend
 
 ```bash
 npm install
-npm run dev
+npm run dev        # tsx watch, recarga automática
+npm run check      # verifica TypeScript sin compilar
+npm run build      # compila a dist/
 ```
 
-API disponible en:
+API disponible en `http://localhost:3000`
 
-`http://localhost:3000`
-
-## 4) Frontend Angular: instalar y ejecutar
+### Frontend
 
 ```bash
 cd frontend
@@ -63,65 +62,60 @@ npm install
 npm start
 ```
 
-Frontend disponible en:
+Frontend disponible en `http://localhost:4200`
 
-`http://localhost:4200`
+---
 
-El frontend consume la API en `http://localhost:3000` (config en `frontend/src/environments/environment.ts`).
+## API
 
-## 5) Endpoints iniciales
+### Health
 
-- `GET /api/health`
-- `GET /api/categories`
-- `POST /api/categories`
-- `GET /api/documents`
-- `POST /api/documents`
-- `POST /api/documents/:id/versions`
-- `PATCH /api/documents/:id/status`
-- `GET /api/documents/:id/audit`
+| Método | Ruta         | Descripción          |
+|--------|--------------|----------------------|
+| GET    | `/api/health` | Estado de la base de datos |
 
-## 6) Payloads base
+### Organizaciones
 
-Crear documento (`POST /api/documents`):
+| Método | Ruta                                  | Descripción                    | Rol mínimo |
+|--------|---------------------------------------|--------------------------------|------------|
+| GET    | `/api/organizations`                  | Organizaciones del usuario     | —          |
+| POST   | `/api/organizations`                  | Crear organización             | —          |
+| GET    | `/api/organizations/:id/members`      | Listar miembros                | viewer     |
+| POST   | `/api/organizations/:id/members`      | Agregar / actualizar miembro   | admin      |
+| PATCH  | `/api/organizations/:id/members/:uid` | Cambiar rol de miembro         | admin      |
+| DELETE | `/api/organizations/:id/members/:uid` | Eliminar miembro               | admin      |
 
-```json
-{
-  "title": "Politica de respaldo",
-  "description": "Documento oficial de respaldos",
-  "categoryId": "UUID_CATEGORIA",
-  "createdBy": "UUID_USUARIO",
-  "storagePath": "documentos/politica-respaldo-v1.pdf",
-  "fileName": "politica-respaldo-v1.pdf",
-  "mimeType": "application/pdf",
-  "fileSize": 125500,
-  "changeSummary": "Version inicial"
-}
-```
+### Categorías
 
-Agregar version (`POST /api/documents/:id/versions`):
+| Método | Ruta                  | Descripción              | Rol mínimo |
+|--------|-----------------------|--------------------------|------------|
+| GET    | `/api/categories`     | Listar categorías        | viewer     |
+| GET    | `/api/categories/:id` | Detalle de categoría     | viewer     |
+| POST   | `/api/categories`     | Crear categoría          | admin      |
+| PUT    | `/api/categories/:id` | Actualizar categoría     | admin      |
+| DELETE | `/api/categories/:id` | Eliminar categoría       | admin      |
 
-```json
-{
-  "uploadedBy": "UUID_USUARIO",
-  "storagePath": "documentos/politica-respaldo-v2.pdf",
-  "fileName": "politica-respaldo-v2.pdf",
-  "mimeType": "application/pdf",
-  "fileSize": 131000,
-  "changeSummary": "Actualizacion de politicas"
-}
-```
+### Documentos
 
-Cambio de estado (`PATCH /api/documents/:id/status`):
+| Método | Ruta                            | Descripción                        | Rol mínimo |
+|--------|---------------------------------|------------------------------------|------------|
+| GET    | `/api/documents`                | Listar documentos (con filtros)    | viewer     |
+| POST   | `/api/documents`                | Crear documento + primera versión  | member     |
+| GET    | `/api/documents/:id`            | Detalle con versiones y aprobaciones | viewer   |
+| PUT    | `/api/documents/:id`            | Actualizar metadatos               | member     |
+| DELETE | `/api/documents/:id`            | Eliminar documento                 | admin      |
+| POST   | `/api/documents/:id/versions`   | Agregar nueva versión              | member     |
+| PATCH  | `/api/documents/:id/status`     | Cambiar estado (aprobación)        | admin      |
+| GET    | `/api/documents/:id/audit`      | Historial de auditoría             | viewer     |
+| GET    | `/api/documents/:id/versions`   | Historial de versiones             | viewer     |
 
-```json
-{
-  "status": "approved",
-  "reviewerId": "UUID_REVISOR",
-  "comments": "Aprobado por direccion"
-}
-```
+Los endpoints que requieren contexto de organización esperan el header `x-organization-id` y `x-user-id`.
 
-## Notas
+---
 
-- `createdBy`, `uploadedBy` y `reviewerId` estan en formato UUID para integrarse con usuarios de Supabase Auth.
-- Este arranque cubre la base tecnica; la siguiente fase recomendada es agregar autenticacion, autorizacion por roles y carga real de archivos a Supabase Storage.
+## Despliegue
+
+- **Backend:** Railway (`https://ntics-production.up.railway.app`)
+- **Frontend:** Netlify (`https://paperhub-bypapulines.netlify.app`)
+
+En producción, configurar `APP_URL` con la URL del frontend para CORS y links de correo.

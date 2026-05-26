@@ -152,7 +152,7 @@
         Accede a tu sistema de gestion documental.
       </p>
       <p class="auth-subtitle" *ngIf="authView() === 'register'">
-        Tu cuenta se crea con Supabase Auth.
+        Crea tu cuenta en minutos, sin tarjeta de credito.
       </p>
 
       <form class="auth-form" *ngIf="authView() === 'login'" (ngSubmit)="login()">
@@ -443,14 +443,43 @@
             </svg>
           </button>
 
-          <button
-            class="btn btn-outline topbar-org-create"
-            type="button"
-            (click)="promptCreateOrganization()"
-            [disabled]="isCreatingOrganization()"
-          >
-            {{ isCreatingOrganization() ? 'Creando...' : '+ Organizacion' }}
-          </button>
+          <div class="org-create-wrap">
+            <button
+              class="btn btn-outline topbar-org-create"
+              type="button"
+              (click)="toggleOrgCreateDropdown()"
+              [disabled]="isCreatingOrganization()"
+              [attr.aria-expanded]="isOrgCreateDropdownOpen()"
+            >
+              + Organizacion
+            </button>
+            <div class="org-create-dropdown" *ngIf="isOrgCreateDropdownOpen()">
+              <form (ngSubmit)="submitWorkspaceOrgCreate()">
+                <label class="field">
+                  <span>Nombre</span>
+                  <input
+                    required
+                    minlength="2"
+                    maxlength="100"
+                    name="workspaceNewOrgName"
+                    [(ngModel)]="workspaceNewOrgName"
+                    placeholder="Ej. Empresa XYZ..."
+                    [disabled]="isCreatingOrganization()"
+                    autofocus
+                  />
+                </label>
+                <div class="form-actions">
+                  <button class="btn btn-primary" type="submit" [disabled]="isCreatingOrganization()">
+                    {{ isCreatingOrganization() ? 'Creando...' : 'Crear' }}
+                  </button>
+                  <button class="btn btn-outline" type="button" (click)="toggleOrgCreateDropdown()">
+                    Cancelar
+                  </button>
+                </div>
+                <p class="msg" *ngIf="organizationsMessage()">{{ organizationsMessage() }}</p>
+              </form>
+            </div>
+          </div>
 
           <div class="user-menu">
             <button
@@ -463,7 +492,7 @@
               <div class="avatar">{{ currentUserInitials() }}</div>
               <div>
                 <strong>{{ currentUserName() }}</strong>
-                <small>Administrador</small>
+                <small *ngIf="activeOrganization()">{{ organizationRoleLabel(activeOrganization()!.role) }}</small>
               </div>
               <svg class="user-chevron" viewBox="0 0 24 24" aria-hidden="true">
                 <path d="m7 10 5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
@@ -486,7 +515,7 @@
           <p>
             {{ organizationsMessage() || 'Aun no hay una organizacion activa para cargar categorias y documentos.' }}
           </p>
-          <button class="btn btn-primary" type="button" (click)="promptCreateOrganization()">
+          <button class="btn btn-primary" type="button" (click)="toggleOrgCreateDropdown()">
             Crear organizacion
           </button>
         </section>
@@ -498,7 +527,6 @@
               <h1>Panel de Control</h1>
               <p>Bienvenido al sistema de gestion documental empresarial</p>
             </div>
-            <small>API: {{ apiBase }}</small>
           </div>
 
           <div class="stats-grid">
@@ -532,15 +560,15 @@
 
             <article class="stat-card">
               <div class="stat-top">
-                <p>Actividad reciente</p>
+                <p>Documentos aprobados</p>
                 <span class="stat-icon tone-success" aria-hidden="true">
                   <svg viewBox="0 0 24 24">
-                    <path d="M4 15l5-5 4 4 7-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+                    <path d="M9 12l2 2 4-4m6 2a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
                   </svg>
                 </span>
               </div>
-              <strong>{{ recentDocuments().length }}</strong>
-              <small>Movimientos recientes</small>
+              <strong>{{ approvedDocuments() }}</strong>
+              <small>Totales en la organizacion</small>
             </article>
           </div>
 
@@ -686,6 +714,13 @@
             </div>
           </article>
 
+          <div class="detail-loading" *ngIf="isLoadingDocumentDetail()">
+            <svg class="detail-loading-spinner" viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="28 56" />
+            </svg>
+            Cargando detalle...
+          </div>
+
           <article class="detail-panel" *ngIf="selectedDocument() as detail">
             <div class="detail-header">
               <div>
@@ -693,7 +728,9 @@
                 <h2>{{ detail.title }}</h2>
                 <p>{{ detail.current_file_name || 'Sin archivo principal' }} - {{ formatFileSize(detail.current_file_size) }}</p>
               </div>
-              <button class="icon-button small" type="button" (click)="closeDocumentDetail()">Cerrar</button>
+              <button class="icon-button small" type="button" (click)="closeDocumentDetail()" title="Cerrar detalle" aria-label="Cerrar detalle">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              </button>
             </div>
 
             <form class="detail-grid" (ngSubmit)="saveDocumentDetail()">

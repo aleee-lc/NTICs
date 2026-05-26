@@ -141,6 +141,7 @@ export class App implements OnInit, OnDestroy {
   readonly isSavingCategory = signal(false);
   readonly isCreatingOrganization = signal(false);
   readonly isUserMenuOpen = signal(false);
+  readonly isOrgCreateDropdownOpen = signal(false);
   readonly isSidebarCollapsed = signal(false);
   readonly showLanding = signal(true);
   readonly isLoadingOrgs = signal(false);
@@ -277,11 +278,11 @@ export class App implements OnInit, OnDestroy {
   detailTitle = '';
   detailDescription = '';
   detailCategoryId = '';
-  detailStatus: DocumentStatus = 'draft';
   approvalComments = '';
   versionChangeSummary = '';
   selectedVersionFile: File | null = null;
   newOrgName = '';
+  workspaceNewOrgName = '';
 
   private supabase: SupabaseClient | null = null;
   private storageBucket = 'documentos';
@@ -445,25 +446,27 @@ export class App implements OnInit, OnDestroy {
     void this.refreshData();
   }
 
-  async promptCreateOrganization(): Promise<void> {
+  toggleOrgCreateDropdown(): void {
+    this.isOrgCreateDropdownOpen.update((v) => !v);
+    if (!this.isOrgCreateDropdownOpen()) {
+      this.workspaceNewOrgName = '';
+      this.organizationsMessage.set('');
+    }
+  }
+
+  async submitWorkspaceOrgCreate(): Promise<void> {
     if (this.isCreatingOrganization()) {
       return;
     }
 
-    const input = window.prompt('Nombre de la nueva organizacion');
-    const name = input?.trim() ?? '';
-
-    if (!name) {
-      return;
-    }
-
+    const name = this.workspaceNewOrgName.trim();
     if (name.length < 2) {
-      this.organizationsMessage.set('El nombre de la organizacion debe tener al menos 2 caracteres.');
+      this.organizationsMessage.set('El nombre debe tener al menos 2 caracteres.');
       return;
     }
 
     this.isCreatingOrganization.set(true);
-    this.organizationsMessage.set('Creando organizacion...');
+    this.organizationsMessage.set('');
 
     try {
       const created = await firstValueFrom(
@@ -483,8 +486,8 @@ export class App implements OnInit, OnDestroy {
       this.organizations.set(nextOrganizations);
       this.activeOrganizationId.set(created.id);
       this.persistActiveOrganizationId(created.id);
-      this.organizationsMessage.set(`Organizacion "${created.name}" creada.`);
-
+      this.isOrgCreateDropdownOpen.set(false);
+      this.workspaceNewOrgName = '';
       await this.refreshData();
     } catch (error) {
       this.organizationsMessage.set(this.readError(error));
@@ -624,21 +627,23 @@ export class App implements OnInit, OnDestroy {
 
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent): void {
-    if (!this.isUserMenuOpen()) {
-      return;
-    }
-
     const target = event.target as Node | null;
-    if (!target) {
-      this.isUserMenuOpen.set(false);
-      return;
+    const hostElement = this.elementRef.nativeElement;
+
+    if (this.isUserMenuOpen()) {
+      const menuContainer = hostElement.querySelector('.user-menu');
+      if (!target || !menuContainer?.contains(target)) {
+        this.isUserMenuOpen.set(false);
+      }
     }
 
-    const hostElement = this.elementRef.nativeElement;
-    const menuContainer = hostElement.querySelector('.user-menu');
-
-    if (!menuContainer?.contains(target)) {
-      this.isUserMenuOpen.set(false);
+    if (this.isOrgCreateDropdownOpen()) {
+      const orgWrap = hostElement.querySelector('.org-create-wrap');
+      if (!target || !orgWrap?.contains(target)) {
+        this.isOrgCreateDropdownOpen.set(false);
+        this.workspaceNewOrgName = '';
+        this.organizationsMessage.set('');
+      }
     }
   }
 
@@ -1066,7 +1071,6 @@ export class App implements OnInit, OnDestroy {
       this.detailTitle = detail.title;
       this.detailDescription = detail.description ?? '';
       this.detailCategoryId = detail.category_id ?? '';
-      this.detailStatus = detail.status;
       this.approvalComments = '';
       this.versionChangeSummary = '';
       this.selectedVersionFile = null;
@@ -1538,7 +1542,6 @@ export class App implements OnInit, OnDestroy {
     this.detailTitle = '';
     this.detailDescription = '';
     this.detailCategoryId = '';
-    this.detailStatus = 'draft';
     this.approvalComments = '';
     this.versionChangeSummary = '';
     this.selectedVersionFile = null;
