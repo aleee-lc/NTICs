@@ -1,4 +1,4 @@
-:host {
+app-root {
   --font-body: 'Manrope', 'Segoe UI', sans-serif;
   --font-heading: 'Outfit', 'Segoe UI', sans-serif;
 
@@ -2005,7 +2005,7 @@ tbody tr:hover td {
 }
 
 @media (display-mode: standalone) {
-  :host {
+  app-root {
     min-height: 100dvh;
   }
 
@@ -2017,7 +2017,7 @@ tbody tr:hover td {
 }
 
 @media (max-width: 760px) {
-  :host {
+  app-root {
     min-height: 100dvh;
     background: #edf3fb;
     -webkit-tap-highlight-color: transparent;
