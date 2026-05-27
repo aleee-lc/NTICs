@@ -1,5 +1,6 @@
 import { env } from "../config/env";
 import { lookup } from "node:dns/promises";
+import fetch from "node-fetch";
 import nodemailer from "nodemailer";
 import SMTPTransport from "nodemailer/lib/smtp-transport";
 

@@ -7,6 +7,7 @@ import { type AuthView } from '../app.models';
   standalone: true,
   imports: [CommonModule],
   templateUrl: './landing-page.component.html',
+  styles: [':host { display: contents; }'],
 })
 export class LandingPageComponent {
   @Output() authNavigate = new EventEmitter<AuthView>();

@@ -8,6 +8,7 @@ import { type OnboardingView } from '../app.models';
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './onboarding-page.component.html',
+  styles: [':host { display: contents; }'],
 })
 export class OnboardingPageComponent {
   @Input() onboardingView: OnboardingView = 'choice';

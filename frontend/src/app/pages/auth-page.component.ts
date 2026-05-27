@@ -8,6 +8,7 @@ import { type AuthView } from '../app.models';
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './auth-page.component.html',
+  styles: [':host { display: contents; }'],
 })
 export class AuthPageComponent {
   @Input() authView: AuthView = 'login';

@@ -1,3 +1,4 @@
+import fetch from "node-fetch";
 import { type NextFunction, type Request, type Response } from "express";
 import { z } from "zod";
 import { pool } from "../config/db";
@@ -29,7 +30,10 @@ export async function requireAuthenticatedUser(
   res: Response,
   next: NextFunction,
 ): Promise<void> {
-  if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) {
+  const supabaseUrl = env.SUPABASE_URL;
+  const supabaseAnonKey = env.SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl || !supabaseAnonKey) {
     res.status(500).json({
       error: "Auth de Supabase no esta configurado en el servidor",
     });
@@ -45,7 +49,7 @@ export async function requireAuthenticatedUser(
   }
 
   try {
-    const authUser = await resolveSupabaseUser(accessToken);
+    const authUser = await resolveSupabaseUser(accessToken, supabaseUrl, supabaseAnonKey);
     if (!authUser) {
       res.status(401).json({ error: "Sesion invalida o expirada" });
       return;
@@ -149,10 +153,14 @@ function resolveAccessToken(req: Request): string | null {
   return normalized.length > 0 ? normalized : null;
 }
 
-async function resolveSupabaseUser(accessToken: string): Promise<AuthenticatedUser | null> {
-  const response = await fetch(`${env.SUPABASE_URL}/auth/v1/user`, {
+async function resolveSupabaseUser(
+  accessToken: string,
+  supabaseUrl: string,
+  supabaseAnonKey: string,
+): Promise<AuthenticatedUser | null> {
+  const response = await fetch(`${supabaseUrl}/auth/v1/user`, {
     headers: {
-      apikey: env.SUPABASE_ANON_KEY,
+      apikey: supabaseAnonKey,
       Authorization: `Bearer ${accessToken}`,
     },
   });

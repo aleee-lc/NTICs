@@ -19,6 +19,7 @@ import {
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './workspace-page.component.html',
+  styles: [':host { display: contents; }'],
 })
 export class WorkspacePageComponent {
   @Input() activePanel: PanelId = 'overview';
