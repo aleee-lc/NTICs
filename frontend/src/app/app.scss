@@ -270,6 +270,13 @@ textarea:focus {
   cursor: pointer;
   padding: 10px 15px;
   font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  line-height: 1.2;
+  appearance: none;
+  -webkit-appearance: none;
 }
 
 .btn:disabled {
@@ -300,13 +307,14 @@ textarea:focus {
 }
 
 .btn-ghost {
-  color: #f4f8ff;
-  border: 1px solid rgba(255, 255, 255, 0.24);
-  background: rgba(255, 255, 255, 0.08);
+  color: var(--color-brand-900);
+  border: 1px solid #cad9eb;
+  background: rgba(255, 255, 255, 0.82);
 }
 
 .btn-ghost:hover {
-  background: rgba(255, 255, 255, 0.16);
+  background: #f2f7fd;
+  border-color: #aec6e4;
 }
 
 .btn-link {
@@ -1508,7 +1516,7 @@ tbody tr:hover td {
 .btn-hero-primary {
   background: linear-gradient(130deg, var(--color-brand-900) 0%, var(--color-brand-700) 100%);
   color: #fff;
-  border: 0;
+  border: 1px solid transparent;
   border-radius: 12px;
   padding: 14px 26px;
   font-weight: 800;
@@ -1516,6 +1524,7 @@ tbody tr:hover td {
   cursor: pointer;
   box-shadow: 0 8px 22px rgba(30, 79, 134, 0.32);
   transition: all var(--motion-fast);
+  -webkit-font-smoothing: antialiased;
 }
 
 .btn-hero-primary:hover {
