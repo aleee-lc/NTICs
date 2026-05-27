@@ -1313,7 +1313,7 @@ export class App implements OnInit, OnDestroy {
       this.applyActiveOrganizationFromStorage(items);
 
       if (items.length === 0) {
-        this.organizationsMessage.set('');
+        this.organizationsMessage.set('No tienes organizaciones asociadas a esta cuenta.');
         return;
       }
 
@@ -1323,6 +1323,10 @@ export class App implements OnInit, OnDestroy {
       }
 
       this.organizationsMessage.set('');
+    } catch (error) {
+      this.organizations.set([]);
+      this.activeOrganizationId.set('');
+      this.organizationsMessage.set(`No se pudieron cargar tus organizaciones: ${this.readError(error)}`);
     } finally {
       this.isLoadingOrgs.set(false);
     }
