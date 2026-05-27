@@ -2250,9 +2250,26 @@ tbody tr:hover td {
     height: 42px;
   }
 
-  .sidebar-toggle,
-  .org-create-wrap {
+  .sidebar-toggle {
     display: none;
+  }
+
+  .org-create-wrap {
+    display: block;
+  }
+
+  .topbar-org-create {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .org-create-dropdown {
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    top: calc(max(14px, env(safe-area-inset-top)) + 94px);
+    width: auto;
+    max-width: none;
   }
 
   .icon-button,
