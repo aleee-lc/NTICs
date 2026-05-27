@@ -15,1042 +15,155 @@
     </p>
   </section>
 
-  <!-- Landing Page -->
-  <section class="landing-layout" *ngIf="appView() === 'landing'">
-    <nav class="landing-nav">
-      <div class="landing-brand">
-        <img src="/paperhub-icon.png" alt="PaperHub" class="landing-brand-icon" />
-        <span>PaperHub</span>
-      </div>
-      <div class="landing-nav-actions">
-        <button class="btn btn-ghost" type="button" (click)="goToAuth('login')">Iniciar sesion</button>
-        <button class="btn btn-primary" type="button" (click)="goToAuth('register')">Empezar gratis</button>
-      </div>
-    </nav>
+  <app-landing-page
+    *ngIf="appView() === 'landing'"
+    (authNavigate)="goToAuth($event)"
+  />
 
-    <div class="landing-hero">
-      <div class="landing-hero-content">
-        <div class="landing-badge">Sistema de Gestion Documental</div>
-        <h1 class="landing-headline">Gestiona documentos empresariales con control total</h1>
-        <p class="landing-subhead">
-          Centraliza, versiona y aprueba documentos de tu empresa. Flujos de trabajo, auditoria completa y acceso por roles.
-        </p>
-        <div class="landing-ctas">
-          <button class="btn btn-hero-primary" type="button" (click)="goToAuth('register')">
-            Crear cuenta gratis
-          </button>
-          <button class="btn btn-hero-outline" type="button" (click)="goToAuth('login')">
-            Iniciar sesion
-          </button>
-        </div>
-      </div>
+  <app-auth-page
+    *ngIf="appView() === 'auth'"
+    [authView]="authView()"
+    [authMessage]="authMessage()"
+    [loginEmail]="loginEmail"
+    [loginPassword]="loginPassword"
+    [registerName]="registerName"
+    [registerEmail]="registerEmail"
+    [registerPassword]="registerPassword"
+    [registerConfirmPassword]="registerConfirmPassword"
+    (authViewChange)="setAuthView($event)"
+    (loginEmailChange)="loginEmail = $event"
+    (loginPasswordChange)="loginPassword = $event"
+    (registerNameChange)="registerName = $event"
+    (registerEmailChange)="registerEmail = $event"
+    (registerPasswordChange)="registerPassword = $event"
+    (registerConfirmPasswordChange)="registerConfirmPassword = $event"
+    (loginSubmit)="login()"
+    (registerSubmit)="createAccount()"
+    (passwordReset)="sendPasswordReset()"
+  />
 
-      <div class="landing-preview" aria-hidden="true">
-        <div class="preview-window">
-          <div class="preview-bar">
-            <span class="preview-dot dot-red"></span>
-            <span class="preview-dot dot-yellow"></span>
-            <span class="preview-dot dot-green"></span>
-            <span class="preview-bar-title">PaperHub — Panel de Control</span>
-          </div>
-          <div class="preview-content">
-            <div class="preview-stat-row">
-              <div class="preview-stat">
-                <span class="preview-stat-num">48</span>
-                <span>Documentos</span>
-              </div>
-              <div class="preview-stat">
-                <span class="preview-stat-num">7</span>
-                <span>En revision</span>
-              </div>
-              <div class="preview-stat">
-                <span class="preview-stat-num">35</span>
-                <span>Aprobados</span>
-              </div>
-            </div>
-            <div class="preview-list">
-              <div class="preview-row">
-                <div class="preview-title-bar long"></div>
-                <span class="preview-pill approved-pill">Aprobado</span>
-              </div>
-              <div class="preview-row">
-                <div class="preview-title-bar medium"></div>
-                <span class="preview-pill pending-pill">Pendiente</span>
-              </div>
-              <div class="preview-row">
-                <div class="preview-title-bar short"></div>
-                <span class="preview-pill draft-pill">Borrador</span>
-              </div>
-              <div class="preview-row">
-                <div class="preview-title-bar long2"></div>
-                <span class="preview-pill approved-pill">Aprobado</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+  <app-onboarding-page
+    *ngIf="appView() === 'onboarding'"
+    [onboardingView]="onboardingView()"
+    [currentUserInitials]="currentUserInitials()"
+    [currentUserName]="currentUserName()"
+    [userEmail]="session()?.user?.email ?? ''"
+    [organizationsMessage]="organizationsMessage()"
+    [newOrgName]="newOrgName"
+    [isCreatingFirstOrg]="isCreatingFirstOrg()"
+    (onboardingViewChange)="onboardingView.set($event)"
+    (logoutClick)="logout()"
+    (newOrgNameChange)="newOrgName = $event"
+    (createOrganization)="createFirstOrganization()"
+    (refreshOrganizations)="refreshOrganizations()"
+  />
 
-    <div class="landing-features">
-      <article class="feature-card">
-        <div class="feature-icon feat-blue">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M6 3h9l5 5v13H6zM14 4.5V9h4.5M9 13h8M9 17h6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
-          </svg>
-        </div>
-        <h3>Versionado completo</h3>
-        <p>Historial de cada version por documento. Nunca pierdas un cambio.</p>
-      </article>
-      <article class="feature-card">
-        <div class="feature-icon feat-green">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M9 12l2 2 4-4m6 2a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
-          </svg>
-        </div>
-        <h3>Flujo de aprobacion</h3>
-        <p>Envio a revision, aprobacion y rechazo con comentarios del revisor.</p>
-      </article>
-      <article class="feature-card">
-        <div class="feature-icon feat-purple">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
-          </svg>
-        </div>
-        <h3>Auditoria completa</h3>
-        <p>Registro detallado de quien hizo que y cuando en cada documento.</p>
-      </article>
-      <article class="feature-card">
-        <div class="feature-icon feat-orange">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm14 10v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
-          </svg>
-        </div>
-        <h3>Multi-empresa</h3>
-        <p>Gestiona varias organizaciones con roles y permisos independientes.</p>
-      </article>
-    </div>
-
-    <div class="landing-footer-cta">
-      <h2>Empieza a organizar tus documentos hoy</h2>
-      <p>Gratis, sin tarjeta de credito. Listo en minutos.</p>
-      <button class="btn btn-hero-primary" type="button" (click)="goToAuth('register')">
-        Crear cuenta gratis
-      </button>
-    </div>
-  </section>
-
-  <!-- Auth -->
-  <section class="auth-layout" *ngIf="appView() === 'auth'">
-    <article class="auth-card">
-      <div class="auth-brand">
-        <img class="auth-brand-logo" src="/paperhub-icon.png" alt="PaperHub" />
-        <p class="eyebrow">PaperHub</p>
-      </div>
-      <h1 *ngIf="authView() === 'login'">Iniciar sesion</h1>
-      <h1 *ngIf="authView() === 'register'">Crear cuenta</h1>
-      <p class="auth-subtitle" *ngIf="authView() === 'login'">
-        Accede a tu sistema de gestion documental.
-      </p>
-      <p class="auth-subtitle" *ngIf="authView() === 'register'">
-        Crea tu cuenta en minutos, sin tarjeta de credito.
-      </p>
-
-      <form class="auth-form" *ngIf="authView() === 'login'" (ngSubmit)="login()">
-        <label class="field">
-          <span>Correo</span>
-          <input
-            type="email"
-            required
-            placeholder="usuario@correo.com"
-            name="loginEmail"
-            [(ngModel)]="loginEmail"
-          />
-        </label>
-
-        <label class="field">
-          <span>Contrasena</span>
-          <input
-            type="password"
-            required
-            placeholder="********"
-            name="loginPassword"
-            [(ngModel)]="loginPassword"
-          />
-        </label>
-
-        <div class="auth-actions">
-          <button class="btn btn-primary" type="submit">Entrar</button>
-          <button class="btn btn-outline" type="button" (click)="setAuthView('register')">
-            Crear cuenta
-          </button>
-          <button class="btn btn-link" type="button" (click)="sendPasswordReset()">
-            Recuperar contrasena
-          </button>
-        </div>
-
-        <p class="msg">{{ authMessage() }}</p>
-      </form>
-
-      <form class="auth-form" *ngIf="authView() === 'register'" (ngSubmit)="createAccount()">
-        <label class="field">
-          <span>Nombre (opcional)</span>
-          <input
-            type="text"
-            placeholder="Nombre completo"
-            name="registerName"
-            [(ngModel)]="registerName"
-          />
-        </label>
-
-        <label class="field">
-          <span>Correo</span>
-          <input
-            type="email"
-            required
-            placeholder="usuario@correo.com"
-            name="registerEmail"
-            [(ngModel)]="registerEmail"
-          />
-        </label>
-
-        <label class="field">
-          <span>Contrasena</span>
-          <input
-            type="password"
-            required
-            minlength="6"
-            placeholder="Minimo 6 caracteres"
-            name="registerPassword"
-            [(ngModel)]="registerPassword"
-          />
-        </label>
-
-        <label class="field">
-          <span>Confirmar contrasena</span>
-          <input
-            type="password"
-            required
-            minlength="6"
-            placeholder="Repite la contrasena"
-            name="registerConfirmPassword"
-            [(ngModel)]="registerConfirmPassword"
-          />
-        </label>
-
-        <div class="auth-actions">
-          <button class="btn btn-primary" type="submit">Registrar</button>
-          <button class="btn btn-outline" type="button" (click)="setAuthView('login')">
-            Volver
-          </button>
-        </div>
-
-        <p class="msg">{{ authMessage() }}</p>
-      </form>
-    </article>
-  </section>
-
-  <!-- Onboarding -->
-  <section class="onboarding-layout" *ngIf="appView() === 'onboarding'">
-    <div class="onboarding-topbar">
-      <div class="onboarding-brand">
-        <img src="/paperhub-icon.png" alt="PaperHub" class="onboarding-brand-icon" />
-        <span>PaperHub</span>
-      </div>
-      <button class="btn btn-outline" type="button" (click)="logout()">Cerrar sesion</button>
-    </div>
-
-    <article class="onboarding-card">
-      <div class="onboarding-welcome">
-        <div class="onboarding-avatar">{{ currentUserInitials() }}</div>
-        <div>
-          <h1>Bienvenido, {{ currentUserName() }}</h1>
-          <p>Tu cuenta esta lista. Para continuar, crea una organizacion o espera a que te inviten a una existente.</p>
-        </div>
-      </div>
-
-      <div class="onboarding-choices" *ngIf="onboardingView() === 'choice'">
-        <button class="choice-card" type="button" (click)="onboardingView.set('create')">
-          <div class="choice-icon choice-blue">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-            </svg>
-          </div>
-          <h3>Crear organizacion</h3>
-          <p>Inicia tu propio espacio de trabajo para tu empresa o equipo.</p>
-          <span class="choice-cta">Comenzar &rarr;</span>
-        </button>
-        <button class="choice-card" type="button" (click)="onboardingView.set('invited')">
-          <div class="choice-icon choice-green">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm14 10v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
-            </svg>
-          </div>
-          <h3>Fui invitado</h3>
-          <p>Un administrador ya me va a agregar a una organizacion existente.</p>
-          <span class="choice-cta">Ver instrucciones &rarr;</span>
-        </button>
-      </div>
-
-      <div class="onboarding-create" *ngIf="onboardingView() === 'create'">
-        <h2>Nueva organizacion</h2>
-        <form (ngSubmit)="createFirstOrganization()">
-          <label class="field">
-            <span>Nombre de la organizacion</span>
-            <input
-              required
-              minlength="2"
-              maxlength="100"
-              name="newOrgName"
-              [(ngModel)]="newOrgName"
-              placeholder="Ej. Empresa XYZ, Equipo Contabilidad..."
-              [disabled]="isCreatingFirstOrg()"
-            />
-          </label>
-          <div class="form-actions onboarding-actions">
-            <button class="btn btn-primary" type="submit" [disabled]="isCreatingFirstOrg()">
-              {{ isCreatingFirstOrg() ? 'Creando...' : 'Crear organizacion' }}
-            </button>
-            <button class="btn btn-outline" type="button" (click)="onboardingView.set('choice')">
-              Volver
-            </button>
-          </div>
-          <p class="msg" *ngIf="organizationsMessage()">{{ organizationsMessage() }}</p>
-        </form>
-      </div>
-
-      <div class="onboarding-invited" *ngIf="onboardingView() === 'invited'">
-        <h2>Esperando invitacion</h2>
-        <div class="invited-info">
-          <p>Comparte este correo con el administrador de tu empresa para que te agregue:</p>
-          <div class="invited-email">{{ session()?.user?.email }}</div>
-          <p class="invited-hint">Una vez que te agreguen, haz clic en "Verificar acceso" para continuar.</p>
-        </div>
-        <div class="form-actions onboarding-actions">
-          <button class="btn btn-primary" type="button" (click)="refreshOrganizations()">
-            Verificar acceso
-          </button>
-          <button class="btn btn-outline" type="button" (click)="onboardingView.set('choice')">
-            Volver
-          </button>
-        </div>
-        <p class="msg" *ngIf="organizationsMessage()">{{ organizationsMessage() }}</p>
-      </div>
-    </article>
-  </section>
-
-  <!-- Workspace -->
-  <section
-    class="workspace"
-    [class.sidebar-collapsed]="isSidebarCollapsed()"
+  <app-workspace-page
     *ngIf="appView() === 'workspace'"
-  >
-    <aside class="sidebar">
-      <div class="sidebar-brand">
-        <img class="brand-logo" src="/paperhub-icon.png" alt="PaperHub" />
-        <div class="brand-copy">
-          <h2>PaperHub</h2>
-          <p>Sistema de Gestion Documental</p>
-        </div>
-      </div>
-
-      <nav class="sidebar-nav">
-        <button class="nav-item" [class.active]="activePanel() === 'overview'" (click)="openPanel('overview')" title="Dashboard">
-          <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M4 4h7v7H4zm9 0h7v5h-7zM4 13h5v7H4zm7 5h9v2h-9zm0-5h9v3h-9z" />
-          </svg>
-          <span>Dashboard</span>
-        </button>
-
-        <button class="nav-item" [class.active]="activePanel() === 'documents'" (click)="openPanel('documents')" title="Documentos">
-          <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M6 3h9l5 5v13H6zM14 4.5V9h4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
-            <path d="M9 13h8M9 17h8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
-          </svg>
-          <span>Documentos</span>
-        </button>
-
-        <button class="nav-item" [class.active]="activePanel() === 'upload'" (click)="openPanel('upload')" title="Subir documento">
-          <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M12 3v10m0-10-4 4m4-4 4 4M4 14v5h16v-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
-          </svg>
-          <span>Subir documento</span>
-        </button>
-
-        <button class="nav-item" [class.active]="activePanel() === 'categories'" (click)="openPanel('categories')" title="Categorias">
-          <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M3 7h7l2 2h9v10H3z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
-          </svg>
-          <span>Categorias</span>
-        </button>
-
-        <button class="nav-item" [class.active]="activePanel() === 'members'" (click)="openPanel('members')" title="Miembros">
-          <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M8 11a4 4 0 1 1 0-8 4 4 0 0 1 0 8Zm8 10H2v-1a6 6 0 0 1 12 0v1Zm4-10v4m2-2h-4m-1-5a3 3 0 1 0-2-5.2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
-          </svg>
-          <span>Miembros</span>
-        </button>
-      </nav>
-    </aside>
-
-    <div class="main-area">
-      <header class="topbar">
-        <label class="search-box">
-          <svg class="search-icon" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="m17 17 4 4M3 11a8 8 0 1 0 16 0 8 8 0 0 0-16 0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
-          </svg>
-          <input
-            type="text"
-            [placeholder]="activeOrganizationId() ? 'Buscar documentos...' : 'Selecciona una organizacion...'"
-            [value]="searchTerm()"
-            (input)="onSearchInput($event)"
-            [disabled]="!activeOrganizationId()"
-          />
-        </label>
-
-        <div class="topbar-actions">
-          <label class="organization-picker">
-            <span>Organizacion</span>
-            <select [value]="activeOrganizationId()" (change)="onOrganizationChange($event)">
-              <option value="" *ngIf="organizations().length === 0">Sin organizaciones</option>
-              <option *ngFor="let organization of organizations()" [value]="organization.id">
-                {{ organization.name }} - {{ organizationRoleLabel(organization.role) }}
-              </option>
-            </select>
-          </label>
-
-          <button
-            class="icon-button sidebar-toggle"
-            type="button"
-            [title]="isSidebarCollapsed() ? 'Expandir menu' : 'Minimizar menu'"
-            [attr.aria-label]="isSidebarCollapsed() ? 'Expandir menu lateral' : 'Minimizar menu lateral'"
-            (click)="toggleSidebar()"
-          >
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M4 7h16M4 12h16M4 17h16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
-            </svg>
-          </button>
-
-          <button
-            class="icon-button"
-            type="button"
-            title="Actualizar"
-            aria-label="Actualizar datos"
-            (click)="refreshData()"
-            [disabled]="!activeOrganizationId()"
-          >
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M21 12a9 9 0 1 1-3-6.7M21 4v6h-6" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" />
-            </svg>
-          </button>
-
-          <div class="org-create-wrap">
-            <button
-              class="btn btn-outline topbar-org-create"
-              type="button"
-              (click)="toggleOrgCreateDropdown()"
-              [disabled]="isCreatingOrganization()"
-              [attr.aria-expanded]="isOrgCreateDropdownOpen()"
-            >
-              + Organizacion
-            </button>
-            <div class="org-create-dropdown" *ngIf="isOrgCreateDropdownOpen()">
-              <form (ngSubmit)="submitWorkspaceOrgCreate()">
-                <label class="field">
-                  <span>Nombre</span>
-                  <input
-                    required
-                    minlength="2"
-                    maxlength="100"
-                    name="workspaceNewOrgName"
-                    [(ngModel)]="workspaceNewOrgName"
-                    placeholder="Ej. Empresa XYZ..."
-                    [disabled]="isCreatingOrganization()"
-                    autofocus
-                  />
-                </label>
-                <div class="form-actions">
-                  <button class="btn btn-primary" type="submit" [disabled]="isCreatingOrganization()">
-                    {{ isCreatingOrganization() ? 'Creando...' : 'Crear' }}
-                  </button>
-                  <button class="btn btn-outline" type="button" (click)="toggleOrgCreateDropdown()">
-                    Cancelar
-                  </button>
-                </div>
-                <p class="msg" *ngIf="organizationsMessage()">{{ organizationsMessage() }}</p>
-              </form>
-            </div>
-          </div>
-
-          <div class="user-menu">
-            <button
-              class="user-pill user-menu-trigger"
-              type="button"
-              (click)="toggleUserMenu()"
-              [attr.aria-expanded]="isUserMenuOpen()"
-              aria-haspopup="menu"
-            >
-              <div class="avatar">{{ currentUserInitials() }}</div>
-              <div>
-                <strong>{{ currentUserName() }}</strong>
-                <small *ngIf="activeOrganization()">{{ organizationRoleLabel(activeOrganization()!.role) }}</small>
-              </div>
-              <svg class="user-chevron" viewBox="0 0 24 24" aria-hidden="true">
-                <path d="m7 10 5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
-              </svg>
-            </button>
-
-            <div class="user-menu-pop" *ngIf="isUserMenuOpen()" role="menu">
-              <p class="user-menu-email">{{ session()?.user?.email }}</p>
-              <button class="btn btn-outline user-menu-logout" type="button" (click)="logout()">
-                Cerrar sesion
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <section class="content">
-        <section class="surface empty-organization" *ngIf="!activeOrganizationId()">
-          <h2>Selecciona una organizacion</h2>
-          <p>
-            {{ organizationsMessage() || 'Aun no hay una organizacion activa para cargar categorias y documentos.' }}
-          </p>
-          <button class="btn btn-primary" type="button" (click)="toggleOrgCreateDropdown()">
-            Crear organizacion
-          </button>
-        </section>
-
-        <ng-container *ngIf="activeOrganizationId()">
-        <section class="surface" *ngIf="activePanel() === 'overview'">
-          <div class="panel-header">
-            <div>
-              <h1>Panel de Control</h1>
-              <p>Bienvenido al sistema de gestion documental empresarial</p>
-            </div>
-          </div>
-
-          <div class="stats-grid">
-            <article class="stat-card">
-              <div class="stat-top">
-                <p>Total de documentos</p>
-                <span class="stat-icon tone-brand" aria-hidden="true">
-                  <svg viewBox="0 0 24 24">
-                    <path d="M6 3h9l5 5v13H6zM14 4.5V9h4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
-                    <path d="M9 13h8M9 17h6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
-                  </svg>
-                </span>
-              </div>
-              <strong>{{ totalDocuments() }}</strong>
-              <small>Registrados en la plataforma</small>
-            </article>
-
-            <article class="stat-card">
-              <div class="stat-top">
-                <p>Pendientes de aprobacion</p>
-                <span class="stat-icon tone-warning" aria-hidden="true">
-                  <svg viewBox="0 0 24 24">
-                    <path d="M12 6v6l3 2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
-                    <circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="1.8" />
-                  </svg>
-                </span>
-              </div>
-              <strong>{{ inReviewDocuments() }}</strong>
-              <small>Requieren atencion</small>
-            </article>
-
-            <article class="stat-card">
-              <div class="stat-top">
-                <p>Documentos aprobados</p>
-                <span class="stat-icon tone-success" aria-hidden="true">
-                  <svg viewBox="0 0 24 24">
-                    <path d="M9 12l2 2 4-4m6 2a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
-                  </svg>
-                </span>
-              </div>
-              <strong>{{ approvedDocuments() }}</strong>
-              <small>Totales en la organizacion</small>
-            </article>
-          </div>
-
-          <article class="table-card">
-            <div class="table-header">
-              <h2>Documentos Recientes</h2>
-            </div>
-            <div class="table-scroll">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Nombre del documento</th>
-                    <th>Categoria</th>
-                    <th>Autor</th>
-                    <th>Version</th>
-                    <th>Estado</th>
-                    <th>Ultima modificacion</th>
-                    <th>Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr class="empty-row" *ngIf="recentDocuments().length === 0">
-                    <td colspan="7">Sin documentos registrados.</td>
-                  </tr>
-                  <tr *ngFor="let item of recentDocuments()">
-                    <td class="doc-title">{{ item.title }}</td>
-                    <td>{{ item.category_name || 'Sin categoria' }}</td>
-                    <td>{{ documentAuthorLabel(item) }}</td>
-                    <td>v{{ item.current_version }}</td>
-                    <td>
-                      <span class="status-pill" [ngClass]="statusClass(item.status)">
-                        {{ statusLabel(item.status) }}
-                      </span>
-                    </td>
-                    <td>{{ item.updated_at | date: 'dd/MM/yyyy' }}</td>
-                    <td>
-                      <button
-                        class="table-action"
-                        type="button"
-                        title="Preview"
-                        (click)="openDocumentPreview(item)"
-                        [disabled]="!item.current_storage_path"
-                      >
-                        Ver
-                      </button>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </article>
-        </section>
-
-        <section class="surface" *ngIf="activePanel() === 'documents'">
-          <div class="panel-header">
-            <div>
-              <h1>Documentos</h1>
-              <p>Consulta y revisa tus archivos registrados.</p>
-            </div>
-          </div>
-
-          <div class="filters-row">
-            <label class="field compact-field">
-              <span>Categoria</span>
-              <select
-                [ngModel]="documentCategoryFilter()"
-                (ngModelChange)="setDocumentCategoryFilter($event)"
-              >
-                <option value="">Todas</option>
-                <option *ngFor="let category of categories()" [value]="category.id">
-                  {{ category.name }}
-                </option>
-              </select>
-            </label>
-
-            <label class="field compact-field">
-              <span>Estado</span>
-              <select
-                [ngModel]="documentStatusFilter()"
-                (ngModelChange)="setDocumentStatusFilter($event)"
-              >
-                <option value="">Todos</option>
-                <option value="draft">Borrador</option>
-                <option value="in_review">Pendiente</option>
-                <option value="approved">Aprobado</option>
-                <option value="rejected">Rechazado</option>
-                <option value="archived">Archivado</option>
-              </select>
-            </label>
-
-            <button class="btn btn-outline" type="button" (click)="clearDocumentFilters()">
-              Limpiar filtros
-            </button>
-          </div>
-
-          <article class="table-card">
-            <div class="table-scroll">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Titulo</th>
-                    <th>Categoria</th>
-                    <th>Estado</th>
-                    <th>Version</th>
-                    <th>Creado</th>
-                    <th>Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr class="empty-row" *ngIf="visibleDocuments().length === 0">
-                    <td colspan="6">No hay documentos para este filtro.</td>
-                  </tr>
-                  <tr *ngFor="let item of visibleDocuments()">
-                    <td class="doc-title">{{ item.title }}</td>
-                    <td>{{ item.category_name || 'Sin categoria' }}</td>
-                    <td>
-                      <span class="status-pill" [ngClass]="statusClass(item.status)">
-                        {{ statusLabel(item.status) }}
-                      </span>
-                    </td>
-                    <td>v{{ item.current_version }}</td>
-                    <td>{{ item.created_at | date: 'dd/MM/yyyy HH:mm' }}</td>
-                    <td>
-                      <button
-                        class="table-action"
-                        type="button"
-                        (click)="openDocumentDetail(item.id)"
-                      >
-                        Detalle
-                      </button>
-                      <button
-                        class="table-action"
-                        type="button"
-                        (click)="openDocumentPreview(item)"
-                        [disabled]="!item.current_storage_path"
-                      >
-                        Preview
-                      </button>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </article>
-
-          <div class="detail-loading" *ngIf="isLoadingDocumentDetail()">
-            <svg class="detail-loading-spinner" viewBox="0 0 24 24" aria-hidden="true">
-              <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="28 56" />
-            </svg>
-            Cargando detalle...
-          </div>
-
-          <article class="detail-panel" *ngIf="selectedDocument() as detail">
-            <div class="detail-header">
-              <div>
-                <p class="eyebrow">Detalle del documento</p>
-                <h2>{{ detail.title }}</h2>
-                <p>{{ detail.current_file_name || 'Sin archivo principal' }} - {{ formatFileSize(detail.current_file_size) }}</p>
-              </div>
-              <button class="icon-button small" type="button" (click)="closeDocumentDetail()" title="Cerrar detalle" aria-label="Cerrar detalle">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-              </button>
-            </div>
-
-            <form class="detail-grid" (ngSubmit)="saveDocumentDetail()">
-              <label class="field">
-                <span>Titulo</span>
-                <input required maxlength="200" name="detailTitle" [(ngModel)]="detailTitle" [disabled]="!canWriteDocuments()" />
-              </label>
-
-              <label class="field">
-                <span>Categoria</span>
-                <select name="detailCategoryId" [(ngModel)]="detailCategoryId" [disabled]="!canWriteDocuments()">
-                  <option value="">Sin categoria</option>
-                  <option *ngFor="let category of categories()" [value]="category.id">
-                    {{ category.name }}
-                  </option>
-                </select>
-              </label>
-
-              <label class="field full">
-                <span>Descripcion</span>
-                <textarea rows="3" maxlength="2000" name="detailDescription" [(ngModel)]="detailDescription" [disabled]="!canWriteDocuments()"></textarea>
-              </label>
-
-              <div class="form-actions full">
-                <button class="btn btn-primary" type="submit" [disabled]="!canWriteDocuments()">Guardar cambios</button>
-                <button class="btn btn-outline" type="button" (click)="changeDocumentStatus('archived')" [disabled]="!canApproveDocuments() || detail.status === 'archived'">
-                  Archivar
-                </button>
-                <button class="btn btn-outline danger-action" type="button" (click)="deleteSelectedDocument()" [disabled]="!canApproveDocuments()">
-                  Eliminar
-                </button>
-              </div>
-            </form>
-
-            <div class="detail-columns">
-              <section class="detail-section">
-                <h3>Aprobacion</h3>
-                <p class="current-status">
-                  Estado actual:
-                  <span class="status-pill" [ngClass]="statusClass(detail.status)">
-                    {{ statusLabel(detail.status) }}
-                  </span>
-                </p>
-                <label class="field">
-                  <span>Comentarios</span>
-                  <textarea rows="3" maxlength="1000" name="approvalComments" [(ngModel)]="approvalComments" [disabled]="!canApproveDocuments()"></textarea>
-                </label>
-                <div class="form-actions">
-                  <button class="btn btn-outline" type="button" (click)="changeDocumentStatus('in_review')" [disabled]="!canWriteDocuments()">
-                    Enviar a revision
-                  </button>
-                  <button class="btn btn-primary" type="button" (click)="changeDocumentStatus('approved')" [disabled]="!canApproveDocuments()">
-                    Aprobar
-                  </button>
-                  <button class="btn btn-outline danger-action" type="button" (click)="changeDocumentStatus('rejected')" [disabled]="!canApproveDocuments()">
-                    Rechazar
-                  </button>
-                </div>
-
-                <div class="timeline">
-                  <p class="empty-inline" *ngIf="detail.approvals.length === 0">Sin decisiones registradas.</p>
-                  <article class="timeline-item" *ngFor="let approval of detail.approvals">
-                    <strong>{{ statusLabel(approval.decision) }}</strong>
-                    <span>{{ approval.reviewer_name || approval.reviewer_email || userIdLabel(approval.reviewer_id) }}</span>
-                    <small>{{ approval.reviewed_at | date: 'dd/MM/yyyy HH:mm' }}</small>
-                    <p *ngIf="approval.comments">{{ approval.comments }}</p>
-                  </article>
-                </div>
-              </section>
-
-              <section class="detail-section">
-                <h3>Versiones</h3>
-                <form class="version-form" (ngSubmit)="uploadDocumentVersion()">
-                  <label class="field">
-                    <span>Archivo nuevo</span>
-                    <input type="file" (change)="onVersionFileSelected($event)" [disabled]="!canWriteDocuments()" />
-                  </label>
-                  <label class="field">
-                    <span>Resumen</span>
-                    <input maxlength="500" name="versionChangeSummary" [(ngModel)]="versionChangeSummary" [disabled]="!canWriteDocuments()" />
-                  </label>
-                  <button class="btn btn-primary" type="submit" [disabled]="!canWriteDocuments()">Subir version</button>
-                </form>
-
-                <div class="version-list">
-                  <article class="version-item" *ngFor="let version of detail.versions">
-                    <div>
-                      <strong>v{{ version.version_number }} - {{ version.file_name }}</strong>
-                      <span>{{ formatFileSize(version.file_size) }} - {{ version.created_at | date: 'dd/MM/yyyy HH:mm' }}</span>
-                      <p *ngIf="version.change_summary">{{ version.change_summary }}</p>
-                    </div>
-                    <button class="table-action" type="button" (click)="openVersionPreview(version)">Ver</button>
-                  </article>
-                </div>
-              </section>
-            </div>
-
-            <section class="detail-section audit-section">
-              <h3>Auditoria</h3>
-              <div class="audit-list">
-                <p class="empty-inline" *ngIf="detail.audit.length === 0">Sin eventos de auditoria.</p>
-                <article class="audit-item" *ngFor="let item of detail.audit">
-                  <strong>{{ auditActionLabel(item) }}</strong>
-                  <span>{{ item.created_at | date: 'dd/MM/yyyy HH:mm' }}</span>
-                </article>
-              </div>
-            </section>
-          </article>
-
-          <p class="msg panel-msg" *ngIf="documentsMessage()">{{ documentsMessage() }}</p>
-        </section>
-
-        <section class="surface" *ngIf="activePanel() === 'upload'">
-          <div class="panel-header">
-            <div>
-              <h1>Subir documento</h1>
-              <p>El archivo se guarda en Supabase Storage y luego se registra en tu backend.</p>
-            </div>
-          </div>
-
-          <form class="upload-grid" (ngSubmit)="uploadDocument()">
-            <label class="field">
-              <span>Titulo</span>
-              <input required maxlength="200" name="docTitle" [(ngModel)]="docTitle" />
-            </label>
-
-            <label class="field">
-              <span>Categoria</span>
-              <select name="docCategoryId" [(ngModel)]="docCategoryId">
-                <option value="">Sin categoria</option>
-                <option *ngFor="let category of categories()" [value]="category.id">
-                  {{ category.name }}
-                </option>
-              </select>
-            </label>
-
-            <label class="field full">
-              <span>Descripcion</span>
-              <textarea rows="4" maxlength="2000" name="docDescription" [(ngModel)]="docDescription">
-              </textarea>
-            </label>
-
-            <label class="field">
-              <span>Resumen de cambio</span>
-              <input maxlength="500" name="docChangeSummary" [(ngModel)]="docChangeSummary" />
-            </label>
-
-            <label class="field">
-              <span>Archivo</span>
-              <input type="file" required (change)="onFileSelected($event)" />
-            </label>
-
-            <div class="full form-actions">
-              <button class="btn btn-primary" type="submit" [disabled]="uploadProgress() > 0 && uploadProgress() < 100">
-                {{ uploadProgress() > 0 && uploadProgress() < 100 ? 'Subiendo...' : 'Subir documento' }}
-              </button>
-            </div>
-
-            <div class="full upload-progress-wrap" *ngIf="uploadProgress() > 0">
-              <div class="upload-progress-bar">
-                <div class="upload-progress-fill" [style.width.%]="uploadProgress()"></div>
-              </div>
-              <span class="upload-progress-label">{{ uploadProgress() }}%</span>
-            </div>
-
-            <p class="msg panel-msg full" *ngIf="uploadMessage()">{{ uploadMessage() }}</p>
-          </form>
-        </section>
-
-        <section class="surface" *ngIf="activePanel() === 'categories'">
-          <div class="panel-header with-action">
-            <div>
-              <h1>Categorias</h1>
-              <p>Organiza documentos por categorias</p>
-            </div>
-            <button class="btn btn-primary" type="button" (click)="openCreateCategoryForm()">
-              + Nueva categoria
-            </button>
-          </div>
-
-          <p class="total-label">Total de categorias: {{ categories().length }}</p>
-
-          <article class="category-form" *ngIf="isCategoryFormOpen()">
-            <h3>{{ editingCategoryId() ? 'Editar categoria' : 'Nueva categoria' }}</h3>
-
-            <form class="category-form-grid" (ngSubmit)="saveCategory()">
-              <label class="field">
-                <span>Nombre</span>
-                <input maxlength="100" required name="categoryName" [(ngModel)]="categoryName" />
-              </label>
-
-              <label class="field full">
-                <span>Descripcion</span>
-                <textarea
-                  rows="3"
-                  maxlength="300"
-                  name="categoryDescription"
-                  [(ngModel)]="categoryDescription"
-                ></textarea>
-              </label>
-
-              <div class="form-actions full">
-                <button class="btn btn-primary" type="submit" [disabled]="isSavingCategory()">
-                  {{ editingCategoryId() ? 'Guardar cambios' : 'Crear categoria' }}
-                </button>
-                <button class="btn btn-outline" type="button" (click)="cancelCategoryForm()">
-                  Cancelar
-                </button>
-              </div>
-            </form>
-          </article>
-
-          <div class="category-grid">
-            <article class="category-card" *ngFor="let category of filteredCategories(); let i = index">
-              <div class="category-card-head">
-                <div class="category-icon" [ngClass]="categoryTone(i)">
-                  <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M3 7h7l2 2h9v10H3z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
-                  </svg>
-                </div>
-                <div class="category-actions">
-                  <button class="icon-button small" type="button" (click)="startEditCategory(category)">
-                    Editar
-                  </button>
-                  <button class="icon-button small danger" type="button" (click)="deleteCategory(category)">
-                    Eliminar
-                  </button>
-                </div>
-              </div>
-
-              <h3>{{ category.name }}</h3>
-              <p>{{ category.description || 'Sin descripcion' }}</p>
-
-              <div class="category-footer">
-                <span>{{ category.documents_count }} documentos</span>
-                <button class="btn btn-link-inline" type="button" (click)="viewCategoryDocuments(category.id)">
-                  Ver documentos
-                </button>
-              </div>
-            </article>
-          </div>
-
-          <p class="msg panel-msg" *ngIf="filteredCategories().length === 0">
-            No hay categorias para la busqueda actual.
-          </p>
-          <p class="msg panel-msg" *ngIf="categoryMessage()">{{ categoryMessage() }}</p>
-        </section>
-
-        <section class="surface" *ngIf="activePanel() === 'members'">
-          <div class="panel-header with-action">
-            <div>
-              <h1>Miembros</h1>
-              <p>Administra accesos y roles de la organizacion.</p>
-            </div>
-          </div>
-
-          <form class="members-form" (ngSubmit)="inviteMember()">
-            <label class="field">
-              <span>Correo</span>
-              <input type="email" required name="inviteEmail" [(ngModel)]="inviteEmail" [disabled]="!canManageMembers()" />
-            </label>
-            <label class="field">
-              <span>Rol</span>
-              <select name="inviteRole" [(ngModel)]="inviteRole" [disabled]="!canManageMembers()">
-                <option value="viewer">Viewer</option>
-                <option value="member">Member</option>
-                <option value="admin">Admin</option>
-                <option value="owner">Owner</option>
-              </select>
-            </label>
-            <div class="form-actions">
-              <button class="btn btn-primary" type="submit" [disabled]="!canManageMembers()">
-                Agregar miembro
-              </button>
-            </div>
-          </form>
-
-          <article class="table-card">
-            <div class="table-scroll">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Usuario</th>
-                    <th>Correo</th>
-                    <th>Rol</th>
-                    <th>Alta</th>
-                    <th>Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr class="empty-row" *ngIf="members().length === 0">
-                    <td colspan="5">Sin miembros cargados.</td>
-                  </tr>
-                  <tr *ngFor="let member of members()">
-                    <td class="doc-title">{{ memberDisplayName(member) }}</td>
-                    <td>{{ member.email || 'Sin correo' }}</td>
-                    <td>
-                      <select class="inline-select" [value]="member.role" (change)="updateMemberRole(member, $event)" [disabled]="!canManageMembers()">
-                        <option value="viewer">Viewer</option>
-                        <option value="member">Member</option>
-                        <option value="admin">Admin</option>
-                        <option value="owner">Owner</option>
-                      </select>
-                    </td>
-                    <td>{{ member.joined_at | date: 'dd/MM/yyyy' }}</td>
-                    <td>
-                      <button class="table-action danger-action" type="button" (click)="removeMember(member)" [disabled]="!canManageMembers()">
-                        Quitar
-                      </button>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </article>
-
-          <p class="msg panel-msg" *ngIf="membersMessage()">{{ membersMessage() }}</p>
-        </section>
-        </ng-container>
-      </section>
-    </div>
-  </section>
+    [activePanel]="activePanel()"
+    [isSidebarCollapsed]="isSidebarCollapsed()"
+    [searchTerm]="searchTerm()"
+    [activeOrganizationId]="activeOrganizationId()"
+    [organizations]="organizations()"
+    [isOrgCreateDropdownOpen]="isOrgCreateDropdownOpen()"
+    [isCreatingOrganization]="isCreatingOrganization()"
+    [organizationsMessage]="organizationsMessage()"
+    [workspaceNewOrgName]="workspaceNewOrgName"
+    [currentUserInitials]="currentUserInitials()"
+    [currentUserName]="currentUserName()"
+    [userEmail]="session()?.user?.email ?? ''"
+    [currentOrganizationRole]="activeOrganization()?.role ?? null"
+    [isUserMenuOpen]="isUserMenuOpen()"
+    [totalDocuments]="totalDocuments()"
+    [inReviewDocuments]="inReviewDocuments()"
+    [approvedDocuments]="approvedDocuments()"
+    [recentDocuments]="recentDocuments()"
+    [documentCategoryFilter]="documentCategoryFilter()"
+    [documentStatusFilter]="documentStatusFilter()"
+    [categories]="categories()"
+    [visibleDocuments]="visibleDocuments()"
+    [isLoadingDocumentDetail]="isLoadingDocumentDetail()"
+    [selectedDocument]="selectedDocument()"
+    [detailTitle]="detailTitle"
+    [detailCategoryId]="detailCategoryId"
+    [detailDescription]="detailDescription"
+    [approvalComments]="approvalComments"
+    [versionChangeSummary]="versionChangeSummary"
+    [documentsMessage]="documentsMessage()"
+    [docTitle]="docTitle"
+    [docCategoryId]="docCategoryId"
+    [docDescription]="docDescription"
+    [docChangeSummary]="docChangeSummary"
+    [uploadProgress]="uploadProgress()"
+    [uploadMessage]="uploadMessage()"
+    [isCategoryFormOpen]="isCategoryFormOpen()"
+    [editingCategoryId]="editingCategoryId()"
+    [isSavingCategory]="isSavingCategory()"
+    [categoryName]="categoryName"
+    [categoryDescription]="categoryDescription"
+    [filteredCategories]="filteredCategories()"
+    [categoryMessage]="categoryMessage()"
+    [members]="members()"
+    [inviteEmail]="inviteEmail"
+    [inviteRole]="inviteRole"
+    [membersMessage]="membersMessage()"
+    [canManageMembers]="canManageMembers()"
+    [canApproveDocuments]="canApproveDocuments()"
+    [canWriteDocuments]="canWriteDocuments()"
+    [organizationRoleLabel]="workspaceHelpers.organizationRoleLabel"
+    [documentAuthorLabel]="workspaceHelpers.documentAuthorLabel"
+    [statusClass]="workspaceHelpers.statusClass"
+    [statusLabel]="workspaceHelpers.statusLabel"
+    [formatFileSize]="workspaceHelpers.formatFileSize"
+    [userIdLabel]="workspaceHelpers.userIdLabel"
+    [memberDisplayName]="workspaceHelpers.memberDisplayName"
+    [categoryTone]="workspaceHelpers.categoryTone"
+    [auditActionLabel]="workspaceHelpers.auditActionLabel"
+    (panelChange)="openPanel($event)"
+    (searchTermChange)="searchTerm.set($event)"
+    (organizationChange)="onOrganizationChange($event)"
+    (toggleSidebar)="toggleSidebar()"
+    (refreshData)="refreshData()"
+    (toggleOrgCreateDropdown)="toggleOrgCreateDropdown()"
+    (workspaceNewOrgNameChange)="workspaceNewOrgName = $event"
+    (createOrganization)="submitWorkspaceOrgCreate()"
+    (toggleUserMenu)="toggleUserMenu()"
+    (logoutClick)="logout()"
+    (openDocumentPreview)="openDocumentPreview($event)"
+    (documentCategoryFilterChange)="setDocumentCategoryFilter($event)"
+    (documentStatusFilterChange)="setDocumentStatusFilter($event)"
+    (clearDocumentFilters)="clearDocumentFilters()"
+    (openDocumentDetail)="openDocumentDetail($event)"
+    (closeDocumentDetail)="closeDocumentDetail()"
+    (detailTitleChange)="detailTitle = $event"
+    (detailCategoryIdChange)="detailCategoryId = $event"
+    (detailDescriptionChange)="detailDescription = $event"
+    (saveDocumentDetail)="saveDocumentDetail()"
+    (changeDocumentStatus)="changeDocumentStatus($event)"
+    (approvalCommentsChange)="approvalComments = $event"
+    (versionFileSelected)="onVersionFileSelected($event)"
+    (versionChangeSummaryChange)="versionChangeSummary = $event"
+    (uploadDocumentVersion)="uploadDocumentVersion()"
+    (openVersionPreview)="openVersionPreview($event)"
+    (deleteSelectedDocument)="deleteSelectedDocument()"
+    (docTitleChange)="docTitle = $event"
+    (docCategoryIdChange)="docCategoryId = $event"
+    (docDescriptionChange)="docDescription = $event"
+    (docChangeSummaryChange)="docChangeSummary = $event"
+    (fileSelected)="onFileSelected($event)"
+    (uploadDocument)="uploadDocument()"
+    (openCreateCategoryForm)="openCreateCategoryForm()"
+    (saveCategory)="saveCategory()"
+    (categoryNameChange)="categoryName = $event"
+    (categoryDescriptionChange)="categoryDescription = $event"
+    (cancelCategoryForm)="cancelCategoryForm()"
+    (startEditCategory)="startEditCategory($event)"
+    (deleteCategory)="deleteCategory($event)"
+    (viewCategoryDocuments)="viewCategoryDocuments($event)"
+    (inviteEmailChange)="inviteEmail = $event"
+    (inviteRoleChange)="inviteRole = $event"
+    (inviteMember)="inviteMember()"
+    (updateMemberRole)="updateMemberRole($event.member, $event.role)"
+    (removeMember)="removeMember($event)"
+  />
 </main>

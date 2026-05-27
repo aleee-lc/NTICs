@@ -1,6 +1,7 @@
 import { type NextFunction, type Request, type Response } from "express";
 import { z } from "zod";
 import { pool } from "../config/db";
+import { env } from "../config/env";
 
 const uuidSchema = z.string().uuid();
 
@@ -10,8 +11,51 @@ interface OrganizationContext {
   membershipRole: "owner" | "admin" | "member" | "viewer";
 }
 
-export interface OrganizationRequest extends Request {
+interface AuthenticatedUser {
+  id: string;
+  email: string | null;
+}
+
+export interface AuthenticatedRequest extends Request {
+  authUser: AuthenticatedUser;
+}
+
+export interface OrganizationRequest extends AuthenticatedRequest {
   organizationContext: OrganizationContext;
+}
+
+export async function requireAuthenticatedUser(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) {
+    res.status(500).json({
+      error: "Auth de Supabase no esta configurado en el servidor",
+    });
+    return;
+  }
+
+  const accessToken = resolveAccessToken(req);
+  if (!accessToken) {
+    res.status(401).json({
+      error: "Authorization Bearer token es obligatorio",
+    });
+    return;
+  }
+
+  try {
+    const authUser = await resolveSupabaseUser(accessToken);
+    if (!authUser) {
+      res.status(401).json({ error: "Sesion invalida o expirada" });
+      return;
+    }
+
+    (req as AuthenticatedRequest).authUser = authUser;
+    next();
+  } catch (error) {
+    next(error);
+  }
 }
 
 export async function requireOrganizationContext(
@@ -20,7 +64,7 @@ export async function requireOrganizationContext(
   next: NextFunction,
 ): Promise<void> {
   const organizationId = resolveOrganizationId(req);
-  const userId = resolveUserIdFromRequest(req);
+  const userId = resolveAuthenticatedUserId(req);
 
   if (!organizationId) {
     res.status(400).json({
@@ -35,19 +79,6 @@ export async function requireOrganizationContext(
     return;
   }
 
-  if (!userId) {
-    res.status(401).json({
-      error: "userId es obligatorio (header x-user-id o query userId)",
-    });
-    return;
-  }
-
-  const parsedUserId = uuidSchema.safeParse(userId);
-  if (!parsedUserId.success) {
-    res.status(400).json({ error: "userId invalido" });
-    return;
-  }
-
   try {
     const membership = await pool.query<{
       role: OrganizationContext["membershipRole"];
@@ -58,7 +89,7 @@ export async function requireOrganizationContext(
       where organization_id = $1 and user_id = $2
       limit 1
       `,
-      [parsedOrganizationId.data, parsedUserId.data],
+      [parsedOrganizationId.data, userId],
     );
 
     if (membership.rowCount === 0) {
@@ -68,7 +99,7 @@ export async function requireOrganizationContext(
 
     (req as OrganizationRequest).organizationContext = {
       organizationId: parsedOrganizationId.data,
-      userId: parsedUserId.data,
+      userId,
       membershipRole: membership.rows[0].role,
     };
 
@@ -78,37 +109,8 @@ export async function requireOrganizationContext(
   }
 }
 
-export function resolveUserIdFromRequest(req: Request): string | null {
-  const headerUserId = req.header("x-user-id");
-  if (headerUserId?.trim()) {
-    return headerUserId.trim();
-  }
-
-  const queryUserId = asSingleString(req.query.userId);
-  if (queryUserId) {
-    return queryUserId;
-  }
-
-  const body = req.body as Record<string, unknown> | undefined;
-  if (!body || typeof body !== "object") {
-    return null;
-  }
-
-  const bodyCandidates = [
-    "userId",
-    "createdBy",
-    "uploadedBy",
-    "reviewerId",
-  ] as const;
-
-  for (const key of bodyCandidates) {
-    const value = body[key];
-    if (typeof value === "string" && value.trim()) {
-      return value.trim();
-    }
-  }
-
-  return null;
+export function resolveAuthenticatedUserId(req: Request): string {
+  return (req as AuthenticatedRequest).authUser.id;
 }
 
 export function hasOrganizationRole(
@@ -130,6 +132,49 @@ function resolveOrganizationId(req: Request): string | null {
   }
 
   return null;
+}
+
+function resolveAccessToken(req: Request): string | null {
+  const authorization = req.header("authorization");
+  if (!authorization) {
+    return null;
+  }
+
+  const [scheme, token] = authorization.split(" ");
+  if (!scheme || !token || scheme.toLowerCase() !== "bearer") {
+    return null;
+  }
+
+  const normalized = token.trim();
+  return normalized.length > 0 ? normalized : null;
+}
+
+async function resolveSupabaseUser(accessToken: string): Promise<AuthenticatedUser | null> {
+  const response = await fetch(`${env.SUPABASE_URL}/auth/v1/user`, {
+    headers: {
+      apikey: env.SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  if (response.status === 401 || response.status === 403) {
+    return null;
+  }
+
+  if (!response.ok) {
+    throw new Error(`No se pudo validar la sesion en Supabase (${response.status})`);
+  }
+
+  const payload = (await response.json()) as { id?: string; email?: string | null };
+  const parsedUserId = uuidSchema.safeParse(payload.id);
+  if (!parsedUserId.success) {
+    return null;
+  }
+
+  return {
+    id: parsedUserId.data,
+    email: payload.email ?? null,
+  };
 }
 
 function asSingleString(value: unknown): string | null {

@@ -1,10 +1,15 @@
 import { Router } from "express";
 import { z } from "zod";
 import { pool } from "../config/db";
-import { type OrganizationRequest, requireOrganizationContext } from "../middleware/organization-context";
+import {
+  type OrganizationRequest,
+  requireAuthenticatedUser,
+  requireOrganizationContext,
+} from "../middleware/organization-context";
 
 export const categoriesRouter = Router();
 
+categoriesRouter.use(requireAuthenticatedUser);
 categoriesRouter.use(requireOrganizationContext);
 
 const idParamsSchema = z.object({

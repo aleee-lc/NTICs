@@ -1,10 +1,14 @@
 import { Router } from "express";
 import { z } from "zod";
 import { pool } from "../config/db";
-import { resolveUserIdFromRequest } from "../middleware/organization-context";
+import {
+  requireAuthenticatedUser,
+  resolveAuthenticatedUserId,
+} from "../middleware/organization-context";
 import { sendOrganizationMemberEmail } from "../services/email";
 
 export const organizationsRouter = Router();
+organizationsRouter.use(requireAuthenticatedUser);
 
 const createOrganizationSchema = z.object({
   name: z.string().trim().min(2).max(120),
@@ -28,18 +32,7 @@ const updateMemberSchema = z.object({
 });
 
 organizationsRouter.get("/", async (req, res, next) => {
-  const userId = resolveUserIdFromRequest(req);
-
-  if (!userId) {
-    return res.status(401).json({
-      error: "userId es obligatorio (header x-user-id o query userId)",
-    });
-  }
-
-  const parsedUserId = uuidSchema.safeParse(userId);
-  if (!parsedUserId.success) {
-    return res.status(400).json({ error: "userId invalido" });
-  }
+  const userId = resolveAuthenticatedUserId(req);
 
   try {
     const result = await pool.query(
@@ -56,7 +49,7 @@ organizationsRouter.get("/", async (req, res, next) => {
       where m.user_id = $1
       order by o.name asc
       `,
-      [parsedUserId.data],
+      [userId],
     );
 
     res.json({ items: result.rows });
@@ -66,19 +59,8 @@ organizationsRouter.get("/", async (req, res, next) => {
 });
 
 organizationsRouter.post("/", async (req, res, next) => {
-  const userId = resolveUserIdFromRequest(req);
+  const userId = resolveAuthenticatedUserId(req);
   const parsedPayload = createOrganizationSchema.safeParse(req.body);
-
-  if (!userId) {
-    return res.status(401).json({
-      error: "userId es obligatorio (header x-user-id o query userId)",
-    });
-  }
-
-  const parsedUserId = uuidSchema.safeParse(userId);
-  if (!parsedUserId.success) {
-    return res.status(400).json({ error: "userId invalido" });
-  }
 
   if (!parsedPayload.success) {
     return res.status(400).json({
@@ -142,7 +124,7 @@ organizationsRouter.post("/", async (req, res, next) => {
       set role = 'owner'
       returning created_at as joined_at
       `,
-      [createdOrganization.id, parsedUserId.data],
+      [createdOrganization.id, userId],
     );
 
     await client.query("commit");
@@ -161,22 +143,15 @@ organizationsRouter.post("/", async (req, res, next) => {
 });
 
 organizationsRouter.get("/:id/members", async (req, res, next) => {
-  const userId = resolveUserIdFromRequest(req);
+  const userId = resolveAuthenticatedUserId(req);
   const parsedParams = organizationParamsSchema.safeParse(req.params);
 
-  if (!userId) {
-    return res.status(401).json({
-      error: "userId es obligatorio (header x-user-id o query userId)",
-    });
-  }
-
-  const parsedUserId = uuidSchema.safeParse(userId);
-  if (!parsedUserId.success || !parsedParams.success) {
+  if (!parsedParams.success) {
     return res.status(400).json({ error: "Datos invalidos" });
   }
 
   try {
-    const access = await getMembership(parsedParams.data.id, parsedUserId.data);
+    const access = await getMembership(parsedParams.data.id, userId);
     if (!access) {
       return res.status(403).json({ error: "No tienes acceso a esta organizacion" });
     }
@@ -211,18 +186,11 @@ organizationsRouter.get("/:id/members", async (req, res, next) => {
 });
 
 organizationsRouter.post("/:id/members", async (req, res, next) => {
-  const userId = resolveUserIdFromRequest(req);
+  const userId = resolveAuthenticatedUserId(req);
   const parsedParams = organizationParamsSchema.safeParse(req.params);
   const parsedPayload = addMemberSchema.safeParse(req.body);
 
-  if (!userId) {
-    return res.status(401).json({
-      error: "userId es obligatorio (header x-user-id o query userId)",
-    });
-  }
-
-  const parsedUserId = uuidSchema.safeParse(userId);
-  if (!parsedUserId.success || !parsedParams.success || !parsedPayload.success) {
+  if (!parsedParams.success || !parsedPayload.success) {
     return res.status(400).json({
       error: "Datos invalidos",
       details: {
@@ -233,7 +201,7 @@ organizationsRouter.post("/:id/members", async (req, res, next) => {
   }
 
   try {
-    const access = await getMembership(parsedParams.data.id, parsedUserId.data);
+    const access = await getMembership(parsedParams.data.id, userId);
     if (!access) {
       return res.status(403).json({ error: "No tienes acceso a esta organizacion" });
     }
@@ -304,23 +272,16 @@ organizationsRouter.post("/:id/members", async (req, res, next) => {
 });
 
 organizationsRouter.patch("/:id/members/:userId", async (req, res, next) => {
-  const userId = resolveUserIdFromRequest(req);
+  const userId = resolveAuthenticatedUserId(req);
   const parsedParams = memberParamsSchema.safeParse(req.params);
   const parsedPayload = updateMemberSchema.safeParse(req.body);
 
-  if (!userId) {
-    return res.status(401).json({
-      error: "userId es obligatorio (header x-user-id o query userId)",
-    });
-  }
-
-  const parsedUserId = uuidSchema.safeParse(userId);
-  if (!parsedUserId.success || !parsedParams.success || !parsedPayload.success) {
+  if (!parsedParams.success || !parsedPayload.success) {
     return res.status(400).json({ error: "Datos invalidos" });
   }
 
   try {
-    const access = await getMembership(parsedParams.data.id, parsedUserId.data);
+    const access = await getMembership(parsedParams.data.id, userId);
     if (!access) {
       return res.status(403).json({ error: "No tienes acceso a esta organizacion" });
     }
@@ -362,22 +323,15 @@ organizationsRouter.patch("/:id/members/:userId", async (req, res, next) => {
 });
 
 organizationsRouter.delete("/:id/members/:userId", async (req, res, next) => {
-  const userId = resolveUserIdFromRequest(req);
+  const userId = resolveAuthenticatedUserId(req);
   const parsedParams = memberParamsSchema.safeParse(req.params);
 
-  if (!userId) {
-    return res.status(401).json({
-      error: "userId es obligatorio (header x-user-id o query userId)",
-    });
-  }
-
-  const parsedUserId = uuidSchema.safeParse(userId);
-  if (!parsedUserId.success || !parsedParams.success) {
+  if (!parsedParams.success) {
     return res.status(400).json({ error: "Datos invalidos" });
   }
 
   try {
-    const access = await getMembership(parsedParams.data.id, parsedUserId.data);
+    const access = await getMembership(parsedParams.data.id, userId);
     if (!access) {
       return res.status(403).json({ error: "No tienes acceso a esta organizacion" });
     }

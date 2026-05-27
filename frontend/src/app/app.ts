@@ -1,116 +1,54 @@
 import { CommonModule } from '@angular/common';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { Component, ElementRef, HostListener, OnDestroy, OnInit, computed, signal } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  HostListener,
+  OnDestroy,
+  OnInit,
+  ViewEncapsulation,
+  computed,
+  signal,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { createClient, type Session, type SupabaseClient } from '@supabase/supabase-js';
 import { firstValueFrom, timeout } from 'rxjs';
+import {
+  type AppView,
+  type AuditLogItem,
+  type AuthView,
+  type CategoryDeleteResponse,
+  type CategoryItem,
+  type DocumentDetail,
+  type DocumentItem,
+  type DocumentStatus,
+  type DocumentVersionItem,
+  type OnboardingView,
+  type OrganizationItem,
+  type OrganizationMember,
+  type OrganizationRole,
+  type PanelId,
+  type PublicConfig,
+} from './app.models';
+import { AuthPageComponent } from './pages/auth-page.component';
+import { LandingPageComponent } from './pages/landing-page.component';
+import { OnboardingPageComponent } from './pages/onboarding-page.component';
+import { WorkspacePageComponent } from './pages/workspace-page.component';
 import { environment } from '../environments/environment';
-
-type PanelId = 'overview' | 'documents' | 'upload' | 'categories' | 'members';
-type AuthView = 'login' | 'register';
-type OnboardingView = 'choice' | 'create' | 'invited';
-type AppView = 'loading' | 'config-error' | 'landing' | 'auth' | 'onboarding' | 'workspace';
-type DocumentStatus = 'draft' | 'in_review' | 'approved' | 'rejected' | 'archived';
-type OrganizationRole = 'owner' | 'admin' | 'member' | 'viewer';
-
-interface PublicConfig {
-  supabaseUrl: string | null;
-  supabaseAnonKey: string | null;
-  storageBucket: string | null;
-}
-
-interface OrganizationItem {
-  id: string;
-  name: string;
-  slug: string;
-  role: OrganizationRole;
-  created_at: string;
-  joined_at?: string;
-}
-
-interface OrganizationMember {
-  user_id: string;
-  role: OrganizationRole;
-  joined_at: string;
-  email: string | null;
-  full_name: string | null;
-}
-
-interface CategoryItem {
-  id: string;
-  name: string;
-  description: string | null;
-  created_at: string;
-  documents_count: number;
-}
-
-interface DocumentItem {
-  id: string;
-  title: string;
-  description: string | null;
-  category_id: string | null;
-  category_name: string | null;
-  status: DocumentStatus;
-  current_version: number;
-  created_by: string;
-  created_at: string;
-  updated_at: string;
-  current_storage_path: string | null;
-  current_file_name: string | null;
-  current_mime_type: string | null;
-}
-
-interface CategoryDeleteResponse {
-  id: string;
-  name: string;
-  unlinkedDocuments: number;
-}
-
-interface DocumentVersionItem {
-  id: string;
-  version_number: number;
-  storage_path: string;
-  file_name: string;
-  mime_type: string | null;
-  file_size: number | null;
-  change_summary: string | null;
-  uploaded_by: string;
-  uploaded_by_email?: string | null;
-  uploaded_by_name?: string | null;
-  created_at: string;
-}
-
-interface DocumentApprovalItem {
-  id: string;
-  reviewer_id: string;
-  reviewer_email: string | null;
-  reviewer_name: string | null;
-  decision: DocumentStatus;
-  comments: string | null;
-  reviewed_at: string;
-  step_role_name?: string | null;
-}
-
-interface AuditLogItem {
-  id: number;
-  entity_type: string;
-  action: string;
-  actor_id: string | null;
-  created_at: string;
-}
-
-interface DocumentDetail extends DocumentItem {
-  current_file_size: number | null;
-  versions: DocumentVersionItem[];
-  approvals: DocumentApprovalItem[];
-  audit: AuditLogItem[];
-}
 
 @Component({
   selector: 'app-root',
-  imports: [CommonModule, FormsModule],
+  imports: [
+    CommonModule,
+    FormsModule,
+    LandingPageComponent,
+    AuthPageComponent,
+    OnboardingPageComponent,
+    WorkspacePageComponent,
+  ],
   templateUrl: './app.html',
   styleUrl: './app.scss',
+  encapsulation: ViewEncapsulation.None,
 })
 export class App implements OnInit, OnDestroy {
   private static readonly HTTP_TIMEOUT_MS = 10000;
@@ -150,6 +88,17 @@ export class App implements OnInit, OnDestroy {
   readonly documentStatusFilter = signal('');
   readonly onboardingView = signal<OnboardingView>('choice');
   readonly apiBase = environment.apiBaseUrl;
+  readonly workspaceHelpers = {
+    organizationRoleLabel: (role: OrganizationItem['role']) => this.organizationRoleLabel(role),
+    documentAuthorLabel: (document: DocumentItem) => this.documentAuthorLabel(document),
+    statusClass: (status: DocumentStatus) => this.statusClass(status),
+    statusLabel: (status: DocumentStatus) => this.statusLabel(status),
+    formatFileSize: (size: number | null | undefined) => this.formatFileSize(size),
+    userIdLabel: (userId: string | null | undefined) => this.userIdLabel(userId),
+    memberDisplayName: (member: OrganizationMember) => this.memberDisplayName(member),
+    categoryTone: (index: number) => this.categoryTone(index),
+    auditActionLabel: (item: AuditLogItem) => this.auditActionLabel(item),
+  };
 
   readonly activeOrganization = computed(() =>
     this.organizations().find((organization) => organization.id === this.activeOrganizationId()) ?? null,
@@ -305,7 +254,11 @@ export class App implements OnInit, OnDestroy {
       }
 
       this.storageBucket = config.storageBucket ?? 'documentos';
-      this.supabase = createClient(config.supabaseUrl, config.supabaseAnonKey);
+      this.supabase = createClient(config.supabaseUrl, config.supabaseAnonKey, {
+        auth: {
+          storage: window.sessionStorage,
+        },
+      });
 
       try {
         await this.syncCurrentSession();
@@ -418,9 +371,11 @@ export class App implements OnInit, OnDestroy {
     }
   }
 
-  onOrganizationChange(event: Event): void {
-    const input = event.target as HTMLSelectElement;
-    const organizationId = input.value;
+  onOrganizationChange(eventOrId: Event | string): void {
+    const organizationId =
+      typeof eventOrId === 'string'
+        ? eventOrId
+        : (eventOrId.target as HTMLSelectElement).value;
 
     this.activeOrganizationId.set(organizationId);
     this.persistActiveOrganizationId(organizationId);
@@ -740,9 +695,14 @@ export class App implements OnInit, OnDestroy {
     }
   }
 
-  async updateMemberRole(member: OrganizationMember, event: Event): Promise<void> {
-    const select = event.target as HTMLSelectElement;
-    const nextRole = select.value as OrganizationRole;
+  async updateMemberRole(
+    member: OrganizationMember,
+    eventOrRole: Event | OrganizationMember['role'],
+  ): Promise<void> {
+    const nextRole =
+      typeof eventOrRole === 'string'
+        ? eventOrRole
+        : ((eventOrRole.target as HTMLSelectElement).value as OrganizationMember['role']);
 
     try {
       await firstValueFrom(
@@ -1453,13 +1413,13 @@ export class App implements OnInit, OnDestroy {
   }
 
   private authHeaders(requireOrganization = false): Record<string, string> {
-    const userId = this.session()?.user.id;
-    if (!userId) {
+    const accessToken = this.session()?.access_token;
+    if (!accessToken) {
       throw new Error('No hay una sesion activa.');
     }
 
     const headers: Record<string, string> = {
-      'x-user-id': userId,
+      Authorization: `Bearer ${accessToken}`,
     };
 
     if (requireOrganization) {

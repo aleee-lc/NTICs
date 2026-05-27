@@ -1,0 +1,114 @@
+<section class="auth-layout">
+  <article class="auth-card">
+    <div class="auth-brand">
+      <img class="auth-brand-logo" src="/paperhub-icon.png" alt="PaperHub" />
+      <p class="eyebrow">PaperHub</p>
+    </div>
+    <h1 *ngIf="authView === 'login'">Iniciar sesion</h1>
+    <h1 *ngIf="authView === 'register'">Crear cuenta</h1>
+    <p class="auth-subtitle" *ngIf="authView === 'login'">
+      Accede a tu sistema de gestion documental.
+    </p>
+    <p class="auth-subtitle" *ngIf="authView === 'register'">
+      Crea tu cuenta en minutos, sin tarjeta de credito.
+    </p>
+
+    <form class="auth-form" *ngIf="authView === 'login'" (ngSubmit)="loginSubmit.emit()">
+      <label class="field">
+        <span>Correo</span>
+        <input
+          type="email"
+          required
+          placeholder="usuario@correo.com"
+          name="loginEmail"
+          [ngModel]="loginEmail"
+          (ngModelChange)="loginEmailChange.emit($event)"
+        />
+      </label>
+
+      <label class="field">
+        <span>Contrasena</span>
+        <input
+          type="password"
+          required
+          placeholder="********"
+          name="loginPassword"
+          [ngModel]="loginPassword"
+          (ngModelChange)="loginPasswordChange.emit($event)"
+        />
+      </label>
+
+      <div class="auth-actions">
+        <button class="btn btn-primary" type="submit">Entrar</button>
+        <button class="btn btn-outline" type="button" (click)="authViewChange.emit('register')">
+          Crear cuenta
+        </button>
+        <button class="btn btn-link" type="button" (click)="passwordReset.emit()">
+          Recuperar contrasena
+        </button>
+      </div>
+
+      <p class="msg">{{ authMessage }}</p>
+    </form>
+
+    <form class="auth-form" *ngIf="authView === 'register'" (ngSubmit)="registerSubmit.emit()">
+      <label class="field">
+        <span>Nombre (opcional)</span>
+        <input
+          type="text"
+          placeholder="Nombre completo"
+          name="registerName"
+          [ngModel]="registerName"
+          (ngModelChange)="registerNameChange.emit($event)"
+        />
+      </label>
+
+      <label class="field">
+        <span>Correo</span>
+        <input
+          type="email"
+          required
+          placeholder="usuario@correo.com"
+          name="registerEmail"
+          [ngModel]="registerEmail"
+          (ngModelChange)="registerEmailChange.emit($event)"
+        />
+      </label>
+
+      <label class="field">
+        <span>Contrasena</span>
+        <input
+          type="password"
+          required
+          minlength="6"
+          placeholder="Minimo 6 caracteres"
+          name="registerPassword"
+          [ngModel]="registerPassword"
+          (ngModelChange)="registerPasswordChange.emit($event)"
+        />
+      </label>
+
+      <label class="field">
+        <span>Confirmar contrasena</span>
+        <input
+          type="password"
+          required
+          minlength="6"
+          placeholder="Repite la contrasena"
+          name="registerConfirmPassword"
+          [ngModel]="registerConfirmPassword"
+          (ngModelChange)="registerConfirmPasswordChange.emit($event)"
+        />
+      </label>
+
+      <div class="auth-actions">
+        <button class="btn btn-primary" type="submit">Registrar</button>
+        <button class="btn btn-outline" type="button" (click)="authViewChange.emit('login')">
+          Volver
+        </button>
+      </div>
+
+      <p class="msg">{{ authMessage }}</p>
+    </form>
+  </article>
+</section>

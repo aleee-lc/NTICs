@@ -1,0 +1,122 @@
+<section class="landing-layout">
+  <nav class="landing-nav">
+    <div class="landing-brand">
+      <img src="/paperhub-icon.png" alt="PaperHub" class="landing-brand-icon" />
+      <span>PaperHub</span>
+    </div>
+    <div class="landing-nav-actions">
+      <button class="btn btn-ghost" type="button" (click)="authNavigate.emit('login')">Iniciar sesion</button>
+      <button class="btn btn-primary" type="button" (click)="authNavigate.emit('register')">Empezar gratis</button>
+    </div>
+  </nav>
+
+  <div class="landing-hero">
+    <div class="landing-hero-content">
+      <div class="landing-badge">Sistema de Gestion Documental</div>
+      <h1 class="landing-headline">Gestiona documentos empresariales con control total</h1>
+      <p class="landing-subhead">
+        Centraliza, versiona y aprueba documentos de tu empresa. Flujos de trabajo, auditoria completa y acceso por roles.
+      </p>
+      <div class="landing-ctas">
+        <button class="btn btn-hero-primary" type="button" (click)="authNavigate.emit('register')">
+          Crear cuenta gratis
+        </button>
+        <button class="btn btn-hero-outline" type="button" (click)="authNavigate.emit('login')">
+          Iniciar sesion
+        </button>
+      </div>
+    </div>
+
+    <div class="landing-preview" aria-hidden="true">
+      <div class="preview-window">
+        <div class="preview-bar">
+          <span class="preview-dot dot-red"></span>
+          <span class="preview-dot dot-yellow"></span>
+          <span class="preview-dot dot-green"></span>
+          <span class="preview-bar-title">PaperHub - Panel de Control</span>
+        </div>
+        <div class="preview-content">
+          <div class="preview-stat-row">
+            <div class="preview-stat">
+              <span class="preview-stat-num">48</span>
+              <span>Documentos</span>
+            </div>
+            <div class="preview-stat">
+              <span class="preview-stat-num">7</span>
+              <span>En revision</span>
+            </div>
+            <div class="preview-stat">
+              <span class="preview-stat-num">35</span>
+              <span>Aprobados</span>
+            </div>
+          </div>
+          <div class="preview-list">
+            <div class="preview-row">
+              <div class="preview-title-bar long"></div>
+              <span class="preview-pill approved-pill">Aprobado</span>
+            </div>
+            <div class="preview-row">
+              <div class="preview-title-bar medium"></div>
+              <span class="preview-pill pending-pill">Pendiente</span>
+            </div>
+            <div class="preview-row">
+              <div class="preview-title-bar short"></div>
+              <span class="preview-pill draft-pill">Borrador</span>
+            </div>
+            <div class="preview-row">
+              <div class="preview-title-bar long2"></div>
+              <span class="preview-pill approved-pill">Aprobado</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="landing-features">
+    <article class="feature-card">
+      <div class="feature-icon feat-blue">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M6 3h9l5 5v13H6zM14 4.5V9h4.5M9 13h8M9 17h6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+      </div>
+      <h3>Versionado completo</h3>
+      <p>Historial de cada version por documento. Nunca pierdas un cambio.</p>
+    </article>
+    <article class="feature-card">
+      <div class="feature-icon feat-green">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M9 12l2 2 4-4m6 2a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+      </div>
+      <h3>Flujo de aprobacion</h3>
+      <p>Envio a revision, aprobacion y rechazo con comentarios del revisor.</p>
+    </article>
+    <article class="feature-card">
+      <div class="feature-icon feat-purple">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+      </div>
+      <h3>Auditoria completa</h3>
+      <p>Registro detallado de quien hizo que y cuando en cada documento.</p>
+    </article>
+    <article class="feature-card">
+      <div class="feature-icon feat-orange">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm14 10v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+      </div>
+      <h3>Multi-empresa</h3>
+      <p>Gestiona varias organizaciones con roles y permisos independientes.</p>
+    </article>
+  </div>
+
+  <div class="landing-footer-cta">
+    <h2>Empieza a organizar tus documentos hoy</h2>
+    <p>Gratis, sin tarjeta de credito. Listo en minutos.</p>
+    <button class="btn btn-hero-primary" type="button" (click)="authNavigate.emit('register')">
+      Crear cuenta gratis
+    </button>
+  </div>
+</section>

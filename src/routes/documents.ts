@@ -4,11 +4,13 @@ import { pool } from "../config/db";
 import {
   hasOrganizationRole,
   type OrganizationRequest,
+  requireAuthenticatedUser,
   requireOrganizationContext,
 } from "../middleware/organization-context";
 
 export const documentsRouter = Router();
 
+documentsRouter.use(requireAuthenticatedUser);
 documentsRouter.use(requireOrganizationContext);
 
 const documentStatusSchema = z.enum([

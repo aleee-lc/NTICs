@@ -1,0 +1,88 @@
+<section class="onboarding-layout">
+  <div class="onboarding-topbar">
+    <div class="onboarding-brand">
+      <img src="/paperhub-icon.png" alt="PaperHub" class="onboarding-brand-icon" />
+      <span>PaperHub</span>
+    </div>
+    <button class="btn btn-outline" type="button" (click)="logoutClick.emit()">Cerrar sesion</button>
+  </div>
+
+  <article class="onboarding-card">
+    <div class="onboarding-welcome">
+      <div class="onboarding-avatar">{{ currentUserInitials }}</div>
+      <div>
+        <h1>Bienvenido, {{ currentUserName }}</h1>
+        <p>Tu cuenta esta lista. Para continuar, crea una organizacion o espera a que te inviten a una existente.</p>
+      </div>
+    </div>
+
+    <div class="onboarding-choices" *ngIf="onboardingView === 'choice'">
+      <button class="choice-card" type="button" (click)="onboardingViewChange.emit('create')">
+        <div class="choice-icon choice-blue">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+          </svg>
+        </div>
+        <h3>Crear organizacion</h3>
+        <p>Inicia tu propio espacio de trabajo para tu empresa o equipo.</p>
+        <span class="choice-cta">Comenzar &rarr;</span>
+      </button>
+      <button class="choice-card" type="button" (click)="onboardingViewChange.emit('invited')">
+        <div class="choice-icon choice-green">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm14 10v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </div>
+        <h3>Fui invitado</h3>
+        <p>Un administrador ya me va a agregar a una organizacion existente.</p>
+        <span class="choice-cta">Ver instrucciones &rarr;</span>
+      </button>
+    </div>
+
+    <div class="onboarding-create" *ngIf="onboardingView === 'create'">
+      <h2>Nueva organizacion</h2>
+      <form (ngSubmit)="createOrganization.emit()">
+        <label class="field">
+          <span>Nombre de la organizacion</span>
+          <input
+            required
+            minlength="2"
+            maxlength="100"
+            name="newOrgName"
+            [ngModel]="newOrgName"
+            (ngModelChange)="newOrgNameChange.emit($event)"
+            placeholder="Ej. Empresa XYZ, Equipo Contabilidad..."
+            [disabled]="isCreatingFirstOrg"
+          />
+        </label>
+        <div class="form-actions onboarding-actions">
+          <button class="btn btn-primary" type="submit" [disabled]="isCreatingFirstOrg">
+            {{ isCreatingFirstOrg ? 'Creando...' : 'Crear organizacion' }}
+          </button>
+          <button class="btn btn-outline" type="button" (click)="onboardingViewChange.emit('choice')">
+            Volver
+          </button>
+        </div>
+        <p class="msg" *ngIf="organizationsMessage">{{ organizationsMessage }}</p>
+      </form>
+    </div>
+
+    <div class="onboarding-invited" *ngIf="onboardingView === 'invited'">
+      <h2>Esperando invitacion</h2>
+      <div class="invited-info">
+        <p>Comparte este correo con el administrador de tu empresa para que te agregue:</p>
+        <div class="invited-email">{{ userEmail }}</div>
+        <p class="invited-hint">Una vez que te agreguen, haz clic en "Verificar acceso" para continuar.</p>
+      </div>
+      <div class="form-actions onboarding-actions">
+        <button class="btn btn-primary" type="button" (click)="refreshOrganizations.emit()">
+          Verificar acceso
+        </button>
+        <button class="btn btn-outline" type="button" (click)="onboardingViewChange.emit('choice')">
+          Volver
+        </button>
+      </div>
+      <p class="msg" *ngIf="organizationsMessage">{{ organizationsMessage }}</p>
+    </div>
+  </article>
+</section>
